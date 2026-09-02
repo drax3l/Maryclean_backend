@@ -1,0 +1,91 @@
+# -------------------------
+# .gitignore para CodeIgniter / PHP
+# Incluye .env y archivos/artefactos que no deben subirse
+# -------------------------
+
+# Sistema operativo
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*~
+.directory
+.Trash-*
+
+# Entorno y secretos
+.env
+.env.*
+env
+
+# Dependencias y artefactos de build
+/vendor/
+/node_modules/
+/build/
+/dist/
+/builds/
+composer.phar
+
+# Composer: no ignorar composer.lock por aplicaciones (opcional)
+# Si quieres ignorarlo, descomenta la línea siguiente
+# /composer.lock
+
+# CodeIgniter writable (permitir index.html de ejemplo)
+/writable/cache/*
+!/writable/cache/index.html
+
+/writable/logs/*
+!/writable/logs/index.html
+
+/writable/session/*
+!/writable/session/index.html
+
+/writable/uploads/*
+!/writable/uploads/index.html
+
+/writable/debugbar/*
+!/writable/debugbar/index.html
+
+# Logs y archivos temporales
+php_errors.log
+*.log
+*.cache
+*.tmp
+*.temp
+*.swp
+
+# Pruebas / PHPUnit
+.phpunit.result.cache
+/tests/_output/
+/phpunit.result.cache
+
+# Bases de datos locales / dumps
+*.sqlite
+*.sql
+*.sql.gz
+*.dump
+
+# IDEs / editores
+.idea/
+*.iml
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Otros
+/.vagrant
+Vagrantfile
+
+# Evitar incluir archivos generados por herramientas
+.cache/
+.sass-cache/
+/node_modules/
+
+# Ignorar archivos de resultados temporales o personales
+/results/
+
+# Si necesitas excluir algo adicional, dime qué carpeta/archivo
+# y lo añado.

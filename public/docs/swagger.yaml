@@ -1,0 +1,382 @@
+openapi: 3.0.0
+info:
+  title: MaryClean API REST
+  description: >
+    Documentación interactiva de la API de Lavandería MaryClean.
+    
+    ### Instrucciones de Autenticación 🔒
+    1. Ejecuta el endpoint `POST /api/v1/auth/login`.
+    2. Copia el token de la respuesta (`data.token`).
+    3. Haz clic en el botón **Authorize** 🔒 (arriba a la derecha) e ingresa el token.
+  version: 1.0.0
+
+servers:
+  - url: /
+    description: Servidor Local
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        status: { type: integer, example: 200 }
+        message: { type: string, example: "Operación exitosa." }
+        data: { type: object }
+        errors: { type: string, nullable: true, example: null }
+
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        status: { type: integer, example: 400 }
+        message: { type: string, example: "Mensaje de error." }
+        data: { type: string, nullable: true, example: null }
+        errors: { type: object }
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ----------------------------------------------------------------------
+  # AUTH
+  # ----------------------------------------------------------------------
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Autenticar usuario y obtener JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string, example: "admin001" }
+                password: { type: string, example: "Admin123!" }
+      responses:
+        '200':
+          description: Login exitoso
+        '401':
+          description: Credenciales inválidas o cuenta desactivada
+        '429':
+          description: Rate limit excedido (Throttler activado)
+
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      summary: Obtener datos del empleado autenticado
+      responses:
+        '200':
+          description: Datos del usuario actual
+
+  # ----------------------------------------------------------------------
+  # CLIENTES
+  # ----------------------------------------------------------------------
+  /api/v1/clientes:
+    get:
+      tags: [Clientes]
+      summary: Listar clientes (con paginación y búsqueda)
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: per_page
+          schema: { type: integer, default: 10 }
+        - in: query
+          name: q
+          schema: { type: string, description: "Búsqueda por nombre o documento" }
+      responses:
+        '200':
+          description: Lista de clientes paginada
+    post:
+      tags: [Clientes]
+      summary: Registrar nuevo cliente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                documento: { type: string, example: "71234567" }
+                nombres: { type: string, example: "Juan Pérez" }
+                telefono: { type: string, example: "987654321" }
+                direccion: { type: string, example: "Av. Siempre Viva 123" }
+      responses:
+        '201':
+          description: Cliente registrado
+
+  /api/v1/clientes/documento/{doc}:
+    get:
+      tags: [Clientes]
+      summary: Buscar cliente por documento exacto
+      parameters:
+        - in: path
+          name: doc
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Cliente encontrado
+        '404':
+          description: No encontrado
+
+  /api/v1/clientes/{id}:
+    get:
+      tags: [Clientes]
+      summary: Obtener detalle de cliente
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Detalle del cliente
+    put:
+      tags: [Clientes]
+      summary: Actualizar cliente
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                telefono: { type: string, example: "999888777" }
+      responses:
+        '200':
+          description: Cliente actualizado
+
+  # ----------------------------------------------------------------------
+  # PEDIDOS
+  # ----------------------------------------------------------------------
+  /api/v1/pedidos:
+    get:
+      tags: [Pedidos]
+      summary: Listar pedidos activos
+      parameters:
+        - in: query
+          name: estado
+          schema: { type: string }
+        - in: query
+          name: sucursal
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Listado de pedidos
+    post:
+      tags: [Pedidos]
+      summary: Registrar nuevo pedido (Recepción)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idCliente: { type: integer, example: 1 }
+                detalles:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      idPrenda: { type: integer, example: 1 }
+                      cantidad: { type: integer, example: 3 }
+                      descripcion: { type: string, example: "Camisas delicadas" }
+      responses:
+        '201':
+          description: Pedido registrado, triggers recalculan el total
+
+  /api/v1/pedidos/{id}:
+    get:
+      tags: [Pedidos]
+      summary: Obtener pedido completo con detalles
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Pedido completo
+
+  /api/v1/pedidos/{id}/ticket:
+    get:
+      tags: [Pedidos]
+      summary: Estructura del ticket de recepción para impresión
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Payload estructurado del ticket
+
+  /api/v1/pedidos/{id}/estado:
+    patch:
+      tags: [Pedidos]
+      summary: Cambiar estado del pedido
+      description: Dispara auditoría MySQL. (Solo admin puede Cancelar)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                estado: { type: string, example: "En Proceso" }
+      responses:
+        '200':
+          description: Estado actualizado
+        '403':
+          description: Rol insuficiente para cancelar
+
+  # ----------------------------------------------------------------------
+  # PAGOS
+  # ----------------------------------------------------------------------
+  /api/v1/pagos:
+    post:
+      tags: [Pagos]
+      summary: Registrar pago presencial (Cajero/Admin)
+      description: >
+        **PRUEBA DE TRIGGER MySQL (Sobrepago)**:
+        Intenta enviar un `monto` de `9999.00` para forzar que el Trigger de MySQL rechace la transacción (SQLSTATE 45000), resultando en HTTP 422.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idPedido: { type: integer, example: 2 }
+                monto: { type: number, format: float, example: 9999.00 }
+                metodo: { type: string, example: "Efectivo" }
+      responses:
+        '201':
+          description: Pago registrado
+        '422':
+          description: Sobrepago (SQLSTATE 45000 capturado por el controlador)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                status: 422
+                message: "El monto supera el saldo pendiente."
+                data: null
+                errors: { codigo_error: "SOBREPAGO_TRIGGER_45000" }
+
+  /api/v1/pagos/pedido/{idPedido}:
+    get:
+      tags: [Pagos]
+      summary: Historial de pagos de un pedido y saldo restante
+      parameters:
+        - in: path
+          name: idPedido
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Historial y saldos
+
+  /api/v1/pagos/{idPago}/recibo:
+    get:
+      tags: [Pagos]
+      summary: Datos de un pago para emitir el recibo de caja
+      parameters:
+        - in: path
+          name: idPago
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Estructura del recibo
+
+  # ----------------------------------------------------------------------
+  # REPORTES
+  # ----------------------------------------------------------------------
+  /api/v1/reportes/dashboard:
+    get:
+      tags: [Reportes]
+      summary: KPIs principales para inicio del Frontend/App
+      responses:
+        '200':
+          description: Dashboard data
+
+  /api/v1/reportes/diario:
+    get:
+      tags: [Reportes]
+      summary: Ingresos del día actual (Cajero/Admin)
+      parameters:
+        - in: query
+          name: fecha
+          schema: { type: string, format: date, description: "YYYY-MM-DD" }
+      responses:
+        '200':
+          description: Reporte diario desde vista SQL
+
+  /api/v1/reportes/mensual:
+    get:
+      tags: [Reportes]
+      summary: Ingresos por mes (Solo Admin)
+      parameters:
+        - in: query
+          name: año
+          schema: { type: integer, example: 2026 }
+        - in: query
+          name: mes
+          schema: { type: integer, example: 9 }
+      responses:
+        '200':
+          description: Histórico mensual
+        '403':
+          description: Prohibido si no es admin
+
+  /api/v1/reportes/cierre-caja:
+    get:
+      tags: [Reportes]
+      summary: Resumen del Stored Procedure de cierre con ROLLUP
+      parameters:
+        - in: query
+          name: fecha
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: SP_CIERRE_CAJA ejecutado
+
+  /api/v1/reportes/servicios:
+    get:
+      tags: [Reportes]
+      summary: Ranking de servicios/prendas más solicitados
+      parameters:
+        - in: query
+          name: desde
+          schema: { type: string, format: date }
+        - in: query
+          name: hasta
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Top servicios
