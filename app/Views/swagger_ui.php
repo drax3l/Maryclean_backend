@@ -23,7 +23,7 @@
     window.onload = () => {
       window.ui = SwaggerUIBundle({
         // REGLA 1: URL base dinámica generada por CI4 para evitar problemas de CORS/Rutas
-        url: "<?= base_url('docs/swagger.yaml') ?>",
+        url: "/docs/swagger.yaml",
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [
