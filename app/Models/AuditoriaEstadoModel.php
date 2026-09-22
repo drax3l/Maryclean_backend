@@ -36,7 +36,9 @@ class AuditoriaEstadoModel extends Model
      */
     protected $allowedFields = [];
 
-    protected $useTimestamps = false;
+    protected $useTimestamps = true;
+    protected $createdField  = 'created_at';
+    protected $updatedField  = 'updated_at';
 
     // No se definen reglas de validación porque no hay operaciones de escritura
     protected $validationRules = [];

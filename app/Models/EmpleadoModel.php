@@ -78,23 +78,7 @@ class EmpleadoModel extends Model
     // Métodos Personalizados
     // ---------------------------------------------------------------
 
-    /**
-     * Obtiene un empleado con los datos de su sucursal.
-     *
-     * @param int $idEmpleado
-     * @return array|null
-     */
-    public function getEmpleadoConSucursal(int $idEmpleado): ?array
-    {
-        return $this->db->table('Empleado e')
-            ->select('e.idEmpleado, e.nombres, e.rol, s.idSucursal, s.nombre AS sucursal, s.telefono AS telefonoSucursal')
-            ->join('Sucursal s', 's.idSucursal = e.idSucursal', 'inner')
-            ->where('e.idEmpleado', $idEmpleado)
-            ->get()
-            ->getRowArray();
-    }
-
-    /**
+/**
      * Lista todos los empleados de una sucursal específica.
      *
      * @param int $idSucursal
@@ -102,7 +86,8 @@ class EmpleadoModel extends Model
      */
     public function getEmpleadosPorSucursal(int $idSucursal): array
     {
-        return $this->where('idSucursal', $idSucursal)
+        return $this->select('idEmpleado, nombres, username, rol, activo, idSucursal, created_at')
+            ->where('idSucursal', $idSucursal)
             ->orderBy('nombres', 'ASC')
             ->findAll();
     }
@@ -116,7 +101,8 @@ class EmpleadoModel extends Model
      */
     public function getEmpleadosPorRol(int $idSucursal, string $rol): array
     {
-        return $this->where('idSucursal', $idSucursal)
+        return $this->select('idEmpleado, nombres, username, rol, activo, idSucursal, created_at')
+            ->where('idSucursal', $idSucursal)
             ->where('rol', $rol)
             ->orderBy('nombres', 'ASC')
             ->findAll();
@@ -130,7 +116,8 @@ class EmpleadoModel extends Model
      */
     public function buscarPorNombre(string $termino): array
     {
-        return $this->like('nombres', $termino, 'both')
+        return $this->select('idEmpleado, nombres, username, rol, activo, idSucursal, created_at')
+            ->like('nombres', $termino, 'both')
             ->orderBy('nombres', 'ASC')
             ->findAll();
     }
@@ -229,3 +216,4 @@ class EmpleadoModel extends Model
             ->getRowArray();
     }
 }
+

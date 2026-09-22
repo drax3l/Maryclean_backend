@@ -28,6 +28,7 @@ class ServicioPrendaModel extends Model
         'nombrePrenda',
         'precio',
         'idServicio',
+        'estado',
     ];
 
     protected $useTimestamps = false;
@@ -39,6 +40,7 @@ class ServicioPrendaModel extends Model
         'nombrePrenda' => 'required|min_length[2]|max_length[100]',
         'precio'       => 'required|decimal|greater_than[0]',
         'idServicio'   => 'required|integer|is_not_unique[Servicio.idServicio]',
+        'estado'       => 'permit_empty|in_list[0,1]',
     ];
 
     protected $validationMessages = [
@@ -56,6 +58,9 @@ class ServicioPrendaModel extends Model
             'required'      => 'El servicio al que pertenece la prenda es obligatorio.',
             'integer'       => 'El ID de servicio debe ser un número entero.',
             'is_not_unique' => 'El servicio especificado no existe en la base de datos.',
+        ],
+        'estado' => [
+            'in_list' => 'El estado debe ser 0 (Inactivo) o 1 (Activo).',
         ],
     ];
 
@@ -87,7 +92,7 @@ class ServicioPrendaModel extends Model
     public function getPrendaConServicio(int $idPrenda): ?array
     {
         return $this->db->table('ServicioPrenda sp')
-            ->select('sp.idPrenda, sp.nombrePrenda, sp.precio, s.idServicio, s.nombre AS servicio, s.tiempoEstimado')
+            ->select('sp.idPrenda, sp.nombrePrenda, sp.precio, sp.estado, s.idServicio, s.nombre AS servicio, s.tiempoEstimado')
             ->join('Servicio s', 's.idServicio = sp.idServicio', 'inner')
             ->where('sp.idPrenda', $idPrenda)
             ->get()
@@ -103,7 +108,24 @@ class ServicioPrendaModel extends Model
     public function getCatalogoParaPedido(): array
     {
         return $this->db->table('ServicioPrenda sp')
-            ->select('sp.idPrenda, sp.nombrePrenda, sp.precio, s.nombre AS servicio')
+            ->select('sp.idPrenda, sp.nombrePrenda, sp.precio, sp.estado, s.nombre AS servicio')
+            ->join('Servicio s', 's.idServicio = sp.idServicio', 'inner')
+            ->where('sp.estado', 1)
+            ->orderBy('s.nombre, sp.nombrePrenda', 'ASC')
+            ->get()
+            ->getResultArray();
+    }
+
+    /**
+     * Devuelve todas las prendas con la información de su servicio padre.
+     * Usado por el endpoint de catálogo de servicios.
+     *
+     * @return array
+     */
+    public function getPrendasCompletas(): array
+    {
+        return $this->db->table('ServicioPrenda sp')
+            ->select('sp.idPrenda, sp.nombrePrenda, sp.precio, sp.estado, s.nombre AS servicio')
             ->join('Servicio s', 's.idServicio = sp.idServicio', 'inner')
             ->orderBy('s.nombre, sp.nombrePrenda', 'ASC')
             ->get()

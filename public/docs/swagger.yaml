@@ -380,3 +380,78 @@ paths:
       responses:
         '200':
           description: Top servicios
+
+  /api/v1/empleados:
+    get:
+      tags: [Empleados]
+      summary: Listar empleados (Solo Admin)
+      parameters:
+        - in: query
+          name: activo
+          schema: { type: integer, enum: [0, 1] }
+      responses:
+        '200':
+          description: Lista de empleados
+    post:
+      tags: [Empleados]
+      summary: Crear nuevo empleado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombres: { type: string }
+                username: { type: string }
+                password: { type: string }
+                rol: { type: string, enum: [admin, cajero, recepcionista] }
+                idSucursal: { type: integer }
+      responses:
+        '201':
+          description: Empleado creado
+
+  /api/v1/empleados/{id}/estado:
+    patch:
+      tags: [Empleados]
+      summary: Cambiar estado (Baja Logica / Reactivar)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                activo: { type: integer, enum: [0, 1] }
+      responses:
+        '200':
+          description: Estado actualizado
+
+  /api/v1/sucursales:
+    get:
+      tags: [Sucursales]
+      summary: Listar todas las sucursales (Solo Admin)
+      responses:
+        '200':
+          description: Lista de sucursales
+    post:
+      tags: [Sucursales]
+      summary: Crear nueva sucursal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre: { type: string }
+                direccion: { type: string }
+                telefono: { type: string }
+      responses:
+        '201':
+          description: Sucursal creada

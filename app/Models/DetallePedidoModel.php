@@ -40,13 +40,15 @@ class DetallePedidoModel extends Model
         'idPrenda',
     ];
 
-    protected $useTimestamps = false;
+    protected $useTimestamps = true;
+    protected $createdField  = 'created_at';
+    protected $updatedField  = 'updated_at';
 
     // ---------------------------------------------------------------
     // Reglas de Validación
     // ---------------------------------------------------------------
     protected $validationRules = [
-        'cantidad'    => 'required|integer|greater_than[0]',
+        'cantidad'    => 'required|numeric|greater_than[0]',
         'descripcion' => 'permit_empty|max_length[255]',
         'importe'     => 'required|decimal|greater_than[0]',
         'idPedido'    => 'required|integer|is_not_unique[Pedido.idPedido]',
@@ -56,7 +58,7 @@ class DetallePedidoModel extends Model
     protected $validationMessages = [
         'cantidad' => [
             'required'     => 'La cantidad es obligatoria.',
-            'integer'      => 'La cantidad debe ser un número entero.',
+            'numeric'      => 'La cantidad debe ser un número válido.',
             'greater_than' => 'La cantidad debe ser mayor a 0.',
         ],
         'importe' => [
@@ -93,7 +95,7 @@ class DetallePedidoModel extends Model
     public function insertarDetalle(
         int $idPedido,
         int $idPrenda,
-        int $cantidad,
+        int|float $cantidad,
         string $descripcion = ''
     ): int|bool {
         $prendaModel = new ServicioPrendaModel();
@@ -184,7 +186,7 @@ class DetallePedidoModel extends Model
             return [
                 'servicio'       => $d['servicio'],
                 'prenda'         => $d['nombrePrenda'],
-                'cantidad'       => (int) $d['cantidad'],
+                'cantidad'       => (float) $d['cantidad'],
                 'precio_unit'    => number_format((float) $d['precioUnitario'], 2),
                 'importe'        => number_format((float) $d['importe'], 2),
                 'descripcion'    => $d['descripcion'] ?: '—',

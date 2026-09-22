@@ -48,7 +48,9 @@ class PedidoModel extends Model
         'idEmpleado',
     ];
 
-    protected $useTimestamps = false;
+    protected $useTimestamps = true;
+    protected $createdField  = 'created_at';
+    protected $updatedField  = 'updated_at';
 
     /**
      * Estados válidos del ciclo de vida de un pedido.
@@ -84,7 +86,7 @@ class PedidoModel extends Model
         ],
         'estado' => [
             'required' => 'El estado del pedido es obligatorio.',
-            'in_list'  => 'Estado inválido. Valores permitidos: ' . implode(', ', self::ESTADOS),
+            'in_list'  => 'Estado inválido. Valores permitidos: ' . 'Recibido, En Proceso, Listo, Entregado, Pagado, Cancelado',
         ],
         'idCliente' => [
             'required'      => 'El cliente del pedido es obligatorio.',
@@ -97,6 +99,55 @@ class PedidoModel extends Model
     ];
 
     protected $skipValidation = false;
+
+    public function getPedidosDinamicos(array $filtros = [], int $perPage = 15): array
+    {
+        // Usamos la vista activa o hacemos joins para sacar datos ligeros
+        $builder = $this->db->table("Pedido p")
+            ->select("p.idPedido, p.codigoTicket, p.estado, p.total, p.fechaRecepcion, c.nombres AS cliente_nombre, e.idSucursal")
+            ->join("Cliente c", "c.idCliente = p.idCliente")
+            ->join("Empleado e", "e.idEmpleado = p.idEmpleado");
+
+        if (!empty($filtros["estado"])) {
+            $builder->where("p.estado", $filtros["estado"]);
+        }
+        if (!empty($filtros["sucursal"])) {
+            $builder->where("e.idSucursal", $filtros["sucursal"]);
+        }
+                if (!empty($filtros["cliente_id"])) {
+            $builder->where("p.idCliente", $filtros["cliente_id"]);
+        }
+
+        // Búsqueda global (Ticket, Nombres, Documento)
+        if (!empty($filtros["search"])) {
+            $search = $filtros["search"];
+            $builder->groupStart()
+                ->like('p.codigoTicket', $search)
+                ->orLike('c.nombres', $search)
+                ->orLike('c.documento', $search)
+            ->groupEnd();
+        }
+
+        $builder->orderBy("p.fechaRecepcion", "DESC");
+
+        // Usamos countAllResults con false para no resetear el query para poder paginar
+        $total = $builder->countAllResults(false);
+        
+        // Paginacin manual rpida
+        $page = isset($filtros["page"]) ? (int) $filtros["page"] : 1;
+        $page = $page > 0 ? $page : 1;
+        $offset = ($page - 1) * $perPage;
+
+        $pedidos = $builder->limit($perPage, $offset)->get()->getResultArray();
+
+        return [
+            "pedidos" => $pedidos,
+            "total"   => $total,
+            "page"    => $page,
+            "per_page" => $perPage
+        ];
+    }
+
 
     // ---------------------------------------------------------------
     // Stored Procedure: sp_registrar_recepcion
@@ -209,7 +260,7 @@ class PedidoModel extends Model
     {
         if (! in_array($nuevoEstado, self::ESTADOS, true)) {
             throw new \InvalidArgumentException(
-                "Estado inválido: '{$nuevoEstado}'. Valores permitidos: " . implode(', ', self::ESTADOS)
+                "Estado inválido: '{$nuevoEstado}'. Valores permitidos: " . 'Recibido, En Proceso, Listo, Entregado, Pagado, Cancelado'
             );
         }
 
@@ -376,3 +427,4 @@ class PedidoModel extends Model
         return max(0.0, (float) $pedido['total'] - $sumaPagos);
     }
 }
+

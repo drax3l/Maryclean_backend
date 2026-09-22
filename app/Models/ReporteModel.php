@@ -32,6 +32,7 @@ class ReporteModel extends Model
      * pero todos los métodos usan queries directas a vistas/SPs.
      */
     protected $table      = 'Pedido';
+    protected $primaryKey = 'idPedido';
     protected $returnType = 'array';
 
     protected $allowedFields = [];
@@ -176,9 +177,6 @@ class ReporteModel extends Model
         $fecha = $fecha ?? date('Y-m-d');
 
         try {
-            $this->db->query('CALL sp_cierre_caja(?)', [$fecha]);
-            $resultado = $this->db->getLastQuery();
-
             // Obtener resultado del SP
             $filas = $this->db->query('CALL sp_cierre_caja(?)', [$fecha])->getResultArray();
 
@@ -262,5 +260,91 @@ class ReporteModel extends Model
             'pendientes_cobro'  => $pendientesCobro,
             'fecha'             => date('d/m/Y'),
         ];
+    }
+
+    /**
+     * Obtiene el listado de clientes más frecuentes, basado en la cantidad
+     * de pedidos realizados y el total gastado.
+     *
+     * @param string|null $fechaInicio Formato Y-m-d
+     * @param string|null $fechaFin    Formato Y-m-d
+     * @param int $limite Cantidad máxima de clientes a retornar (ej. 5 o 10)
+     * @return array
+     */
+    public function getClientesFrecuentes(?string $fechaInicio, ?string $fechaFin, int $limite = 10): array
+    {
+        $builder = $this->db->table('Pedido p')
+            ->select('c.idCliente, c.documento, c.nombres, COUNT(p.idPedido) AS totalPedidos, SUM(p.total) AS totalGastado')
+            ->join('Cliente c', 'c.idCliente = p.idCliente', 'inner')
+            ->where('p.estado !=', 'Cancelado');
+
+        if ($fechaInicio) {
+            $builder->where('DATE(p.fechaRecepcion) >=', $fechaInicio);
+        }
+        if ($fechaFin) {
+            $builder->where('DATE(p.fechaRecepcion) <=', $fechaFin);
+        }
+
+        return $builder->groupBy('c.idCliente, c.documento, c.nombres')
+            ->orderBy('totalPedidos', 'DESC')
+            ->orderBy('totalGastado', 'DESC')
+            ->limit($limite)
+            ->get()
+            ->getResultArray();
+    }
+
+    /**
+     * Evolución diaria de ingresos y pedidos (Gráfico de Barras)
+     */
+    public function getEvolucionDiaria(?string $fechaInicio, ?string $fechaFin): array
+    {
+        $fechaInicio = $fechaInicio ?? date('Y-m-d', strtotime('-30 days'));
+        $fechaFin    = $fechaFin ?? date('Y-m-d');
+
+        return $this->db->table('Pedido p')
+            ->select('DATE(p.fechaRecepcion) AS fecha, COUNT(p.idPedido) AS cantidadPedidos, SUM(p.total) AS totalIngresos')
+            ->where('p.estado !=', 'Cancelado')
+            ->where('DATE(p.fechaRecepcion) >=', $fechaInicio)
+            ->where('DATE(p.fechaRecepcion) <=', $fechaFin)
+            ->groupBy('DATE(p.fechaRecepcion)')
+            ->orderBy('fecha', 'ASC')
+            ->get()
+            ->getResultArray();
+    }
+
+    /**
+     * Distribución de servicios (Gráfico Circular/Pie)
+     */
+    public function getDistribucionServicios(?string $fechaInicio, ?string $fechaFin): array
+    {
+        $builder = $this->db->table('DetallePedido dp')
+            ->select('s.nombre AS servicio, SUM(dp.cantidad) AS cantidadPrendas, SUM(dp.importe) AS ingresosGenerados')
+            ->join('ServicioPrenda sp', 'sp.idPrenda = dp.idPrenda', 'inner')
+            ->join('Servicio s', 's.idServicio = sp.idServicio', 'inner')
+            ->join('Pedido p', 'p.idPedido = dp.idPedido', 'inner')
+            ->where('p.estado !=', 'Cancelado');
+
+        if ($fechaInicio) $builder->where('DATE(p.fechaRecepcion) >=', $fechaInicio);
+        if ($fechaFin)    $builder->where('DATE(p.fechaRecepcion) <=', $fechaFin);
+
+        return $builder->groupBy('s.idServicio, s.nombre')
+            ->orderBy('ingresosGenerados', 'DESC')
+            ->get()
+            ->getResultArray();
+    }
+
+    /**
+     * Entregas Urgentes (Pedidos activos más antiguos que no han sido entregados)
+     */
+    public function getEntregasUrgentes(int $limite = 5): array
+    {
+        return $this->db->table('Pedido p')
+            ->select('p.idPedido, p.codigoTicket, p.fechaRecepcion, p.estado, c.nombres AS cliente, c.telefono AS telefonoCliente')
+            ->join('Cliente c', 'c.idCliente = p.idCliente', 'inner')
+            ->whereIn('p.estado', ['Recibido', 'En Proceso', 'Listo'])
+            ->orderBy('p.fechaRecepcion', 'ASC')
+            ->limit($limite)
+            ->get()
+            ->getResultArray();
     }
 }

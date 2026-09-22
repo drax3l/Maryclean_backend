@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <phpunit
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
@@ -24,7 +24,7 @@
         <testsuite name="App">
             <directory>./tests</directory>
         </testsuite>
-        <!-- Suite específica para modelos de MaryClean -->
+        <!-- Suite especÃ­fica para modelos de MaryClean -->
         <testsuite name="MaryClean Models">
             <directory>./tests/app/Models</directory>
         </testsuite>
@@ -58,7 +58,7 @@
 
         <!--
         =====================================================================
-        CONFIGURACIÓN DE BASE DE DATOS PARA TESTING — MaryClean
+        CONFIGURACIÃ“N DE BASE DE DATOS PARA TESTING â€” MaryClean
         =====================================================================
         La suite de tests apunta ESTRICTAMENTE a `lavanderia_test` para
         evitar contaminar la BD de desarrollo `lavanderia`.
@@ -68,11 +68,11 @@
           GRANT ALL PRIVILEGES ON lavanderia_test.* TO 'root'@'localhost';
 
         Luego ejecutar las migraciones en el entorno de testing:
-          php spark migrate --env testing
-          php spark db:seed LavanderiaSeeder --env testing
+          php spark migrate -env testing
+          php spark db:seed LavanderiaSeeder -env testing
 
         Para ejecutar solo los tests de modelos:
-          vendor\bin\phpunit --testsuite "MaryClean Models"
+          vendor\bin\phpunit -testsuite "MaryClean Models"
         =====================================================================
         -->
         <env name="database.tests.hostname" value="localhost"/>

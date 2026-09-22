@@ -200,7 +200,7 @@ abstract class BaseApiController extends ResourceController
      */
     protected function getAuthPayload(): array
     {
-        return $this->request->jwtPayload ?? [];
+        return \App\Libraries\JwtContext::get();
     }
 
     /**

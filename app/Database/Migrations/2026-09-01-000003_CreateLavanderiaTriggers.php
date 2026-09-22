@@ -159,13 +159,7 @@ class Migration_2026_09_01_000003_CreateLavanderiaTriggers extends Migration
 
                 IF NEW.monto > v_saldo THEN
                     SIGNAL SQLSTATE '45000'
-                        SET MESSAGE_TEXT = CONCAT(
-                            'ERROR: El monto ingresado (S/ ',
-                            ROUND(NEW.monto, 2),
-                            ') excede el saldo pendiente del pedido (S/ ',
-                            ROUND(v_saldo, 2),
-                            '). Operacion de sobrepago rechazada.'
-                        );
+                        SET MESSAGE_TEXT = 'ERROR: El monto ingresado excede el saldo pendiente del pedido. Operacion de sobrepago rechazada.';
                 END IF;
             END
         ");

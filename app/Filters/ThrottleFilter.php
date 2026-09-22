@@ -36,18 +36,22 @@ class ThrottleFilter implements FilterInterface
         $limite   = isset($arguments[0]) ? (int) $arguments[0] : 4;
         $segundos = isset($arguments[1]) ? (int) $arguments[1] : 60;
 
-        // Se usa la IP del cliente como llave para el throttling
-        $ip = $request->getIPAddress();
+        // Sanitizar la IP para usarla como clave de cache válida.
+        // CI4 no permite caracteres reservados {}()/\@: en las cache keys.
+        // En localhost IPv6, la IP es '::1', que contiene ':'.
+        $path     = md5($request->getUri()->getPath());
+        $ip       = $request->getIPAddress();
+        $cacheKey = 'throttle_' . $path . '_' . str_replace([':', '.'], '_', $ip);
 
-        if ($throttler->check($ip, $limite, $segundos) === false) {
+        if ($throttler->check($cacheKey, $limite, $segundos) === false) {
             return Services::response()
                 ->setStatusCode(ResponseInterface::HTTP_TOO_MANY_REQUESTS)
                 ->setJSON([
                     'success' => false,
                     'status'  => 429,
-                    'message' => 'Demasiados intentos fallidos. Por favor, intente de nuevo más tarde.',
+                    'message' => 'Demasiadas peticiones. Por favor, intente de nuevo más tarde.',
                     'data'    => null,
-                    'errors'  => ['auth' => 'RATE_LIMIT_EXCEEDED'],
+                    'errors'  => ['throttler' => 'RATE_LIMIT_EXCEEDED'],
                 ]);
         }
 

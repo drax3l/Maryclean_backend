@@ -43,7 +43,7 @@ class Filters extends BaseFilters
         'rol'           => RolFilter::class,
         // MaryClean — Filtros de Seguridad API (JWT + CORS)
         'jwt'           => JwtFilter::class,
-        'cors'          => CorsFilter::class,
+        'mcCors'        => CorsFilter::class,
         'throttler'     => \App\Filters\ThrottleFilter::class,
     ];
 
@@ -84,7 +84,8 @@ class Filters extends BaseFilters
     public array $globals = [
         'before' => [
             // 'honeypot',
-            'csrf',         // Protección CSRF activa en todas las rutas POST
+            // CSRF se aplica a rutas web, pero se EXCLUYE de la API REST (usa JWT en su lugar)
+            'csrf' => ['except' => ['api/*', 'api/v1/*']],
             // 'invalidchars',
         ],
         'after' => [

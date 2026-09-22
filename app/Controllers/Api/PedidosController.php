@@ -6,6 +6,7 @@ namespace App\Controllers\Api;
 
 use App\Models\PedidoModel;
 use App\Models\DetallePedidoModel;
+use App\Models\PagoModel;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 
@@ -36,11 +37,13 @@ class PedidosController extends BaseApiController
 {
     private PedidoModel       $pedidoModel;
     private DetallePedidoModel $detalleModel;
+    private PagoModel $pagoModel;
 
     public function __construct()
     {
         $this->pedidoModel  = new PedidoModel();
         $this->detalleModel = new DetallePedidoModel();
+        $this->pagoModel = new PagoModel();
     }
 
     // ---------------------------------------------------------------
@@ -69,25 +72,30 @@ class PedidosController extends BaseApiController
     public function index(): ResponseInterface
     {
         $payload    = $this->getAuthPayload();
-        $estado     = $this->request->getGet('estado');
-        $idSucursal = $this->request->getGet('sucursal');
+        
+        $filtros = [
+            'estado'     => $this->request->getGet('estado'),
+            'sucursal'   => $this->request->getGet('sucursal'),
+            'cliente_id' => $this->request->getGet('cliente_id'),
+            'search'     => $this->request->getGet('search'),
+            'page'       => $this->request->getGet('page') ?? 1,
+        ];
 
         // No-admins solo ven su sucursal
-        if (! $this->tieneRol('admin') && empty($idSucursal)) {
-            $idSucursal = $payload['sucursal'] ?? null;
+        if (! $this->tieneRol('admin') && empty($filtros['sucursal'])) {
+            $filtros['sucursal'] = $payload['sucursal'] ?? null;
         }
 
-        if ($estado !== null) {
-            $pedidos = $this->pedidoModel->getPedidosActivosPorEstado($estado);
-        } elseif ($idSucursal !== null) {
-            $pedidos = $this->pedidoModel->getPedidosActivosPorSucursal((int) $idSucursal);
-        } else {
-            $pedidos = $this->pedidoModel->getPedidosActivos();
-        }
+        $perPage = (int) ($this->request->getGet('per_page') ?? 15);
+        $perPage = $perPage > 0 && $perPage <= 100 ? $perPage : 15; // Límite de 100 para proteger BD
+
+        $resultado = $this->pedidoModel->getPedidosDinamicos($filtros, $perPage);
 
         return $this->respondSuccess([
-            'pedidos' => $pedidos,
-            'total'   => count($pedidos),
+            'pedidos'  => $resultado['pedidos'],
+            'total'    => $resultado['total'],
+            'page'     => $resultado['page'],
+            'per_page' => $resultado['per_page']
         ]);
     }
 
@@ -207,7 +215,7 @@ class PedidosController extends BaseApiController
                 $resultado = $this->detalleModel->insertarDetalle(
                     $idPedido,
                     (int) $detalle['idPrenda'],
-                    (int) $detalle['cantidad'],
+                    (float) $detalle['cantidad'],
                     $detalle['descripcion'] ?? ''
                 );
 
@@ -215,6 +223,23 @@ class PedidosController extends BaseApiController
                     $erroresDetalle[] = "Prenda #{$detalle['idPrenda']} (línea {$i}): no se pudo insertar (precio inválido o prenda inexistente).";
                 }
             }
+
+            // --- FASE 2: PROCESAR PAGO INICIAL ADELANTADO ---
+            if (!empty($body['pagoInicial']) && is_array($body['pagoInicial'])) {
+                $pagoInicial = $body['pagoInicial'];
+                $monto = (float)($pagoInicial['monto'] ?? 0);
+                $metodo = $pagoInicial['metodo'] ?? '';
+
+                if ($monto > 0 && in_array($metodo, ['Efectivo', 'Tarjeta', 'Yape/Plin'])) {
+                    $resultadoPago = $this->pagoModel->registrarPago($idPedido, $monto, $metodo);
+                    if (!$resultadoPago['success']) {
+                        $erroresDetalle[] = "Pago Inicial Rechazado: " . $resultadoPago['mensaje'];
+                    }
+                } else {
+                    $erroresDetalle[] = "Pago Inicial Ignorado: El monto debe ser > 0 y el método válido (Efectivo, Tarjeta, Yape/Plin).";
+                }
+            }
+            // --------------------------------------------------
 
             // Si hubo errores en detalles, informar pero el pedido fue creado
             if (! empty($erroresDetalle)) {

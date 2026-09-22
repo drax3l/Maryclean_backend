@@ -253,4 +253,101 @@ class ReportesController extends BaseApiController
             'ranking' => $ranking,
         ]);
     }
+
+    /**
+     * GET /api/v1/reportes/clientes-frecuentes
+     * 
+     * Devuelve los clientes con mayor cantidad de pedidos y dinero invertido.
+     * Soporta filtros de fecha (desde, hasta) opcionales.
+     * Solo para administradores.
+     */
+    public function clientesFrecuentes()
+    {
+        try {
+            if (!$this->tieneRol('admin')) {
+                return $this->respondError('No tienes permisos para ver el reporte de clientes frecuentes.', 403);
+            }
+
+            $desde = $this->request->getGet('desde') ?: null;
+            $hasta = $this->request->getGet('hasta') ?: null;
+            $limite = (int) ($this->request->getGet('limite') ?: 10);
+
+            // Validar formato de fechas si se envían
+            if ($desde && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $desde)) {
+                return $this->respondError('Formato de fecha de inicio inválido. Use YYYY-MM-DD.', 400);
+            }
+            if ($hasta && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $hasta)) {
+                return $this->respondError('Formato de fecha de fin inválido. Use YYYY-MM-DD.', 400);
+            }
+
+            // Sanitizar límite para evitar abusos
+            if ($limite <= 0) $limite = 5;
+            if ($limite > 100) $limite = 100;
+
+            $clientes = $this->reporteModel->getClientesFrecuentes($desde, $hasta, $limite);
+
+            return $this->respondSuccess([
+                'desde'    => $desde,
+                'hasta'    => $hasta,
+                'clientes' => $clientes
+            ], 'Ranking de clientes frecuentes');
+        } catch (\Exception $e) {
+            return $this->handleDbException($e, 'Error al obtener el ranking de clientes.');
+        }
+    }
+
+    /**
+     * GET /api/v1/reportes/evolucion
+     */
+    public function evolucion()
+    {
+        try {
+            if (!$this->tieneRol('admin')) {
+                return $this->respondError('No tienes permisos.', 403);
+            }
+            $desde = $this->request->getGet('desde') ?: null;
+            $hasta = $this->request->getGet('hasta') ?: null;
+            
+            $datos = $this->reporteModel->getEvolucionDiaria($desde, $hasta);
+            return $this->respondSuccess($datos, 'Evolución diaria obtenida.');
+        } catch (\Exception $e) {
+            return $this->handleDbException($e, 'Error al obtener evolución.');
+        }
+    }
+
+    /**
+     * GET /api/v1/reportes/distribucion
+     */
+    public function distribucion()
+    {
+        try {
+            if (!$this->tieneRol('admin')) {
+                return $this->respondError('No tienes permisos.', 403);
+            }
+            $desde = $this->request->getGet('desde') ?: null;
+            $hasta = $this->request->getGet('hasta') ?: null;
+            
+            $datos = $this->reporteModel->getDistribucionServicios($desde, $hasta);
+            return $this->respondSuccess($datos, 'Distribución de servicios obtenida.');
+        } catch (\Exception $e) {
+            return $this->handleDbException($e, 'Error al obtener distribución.');
+        }
+    }
+
+    /**
+     * GET /api/v1/reportes/entregas-urgentes
+     */
+    public function entregasUrgentes()
+    {
+        try {
+            if (!$this->tieneRol('admin', 'cajero', 'recepcionista')) {
+                return $this->respondError('No tienes permisos.', 403);
+            }
+            $limite = (int) ($this->request->getGet('limite') ?: 5);
+            $datos = $this->reporteModel->getEntregasUrgentes($limite);
+            return $this->respondSuccess($datos, 'Entregas urgentes obtenidas.');
+        } catch (\Exception $e) {
+            return $this->handleDbException($e, 'Error al obtener entregas urgentes.');
+        }
+    }
 }

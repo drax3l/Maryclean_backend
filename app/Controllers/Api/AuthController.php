@@ -153,6 +153,10 @@ class AuthController extends BaseApiController
             return $this->respondNotFound('El empleado del token ya no existe en el sistema.');
         }
 
+        if ((int) $empleado['activo'] !== 1) {
+            return $this->respondError('Cuenta desactivada. Acceso denegado.', ResponseInterface::HTTP_UNAUTHORIZED);
+        }
+
         return $this->respondSuccess([
             'id'         => (int) $empleado['idEmpleado'],
             'nombres'    => $empleado['nombres'],

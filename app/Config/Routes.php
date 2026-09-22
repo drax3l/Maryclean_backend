@@ -5,54 +5,62 @@ use CodeIgniter\Router\RouteCollection;
 /** @var RouteCollection $routes */
 
 // -----------------------------------------------------------------------
-// RUTA WEB PRINCIPAL
+// RUTAS WEB
 // -----------------------------------------------------------------------
 $routes->get('/', 'DocsController::index');
 
 // -----------------------------------------------------------------------
-// API REST v1 — MaryClean
+// SWAGGER UI â€” Ruta pÃºblica (sin JWT, sin CSRF)
+// -----------------------------------------------------------------------
+$routes->get('api/v1/docs', 'DocsController::index');
+
+// -----------------------------------------------------------------------
+// API REST v1 â€” MaryClean
 //
 // Prefijo:  /api/v1/
-// Filtros:  cors   → CorsFilter (CORS headers + preflight OPTIONS)
-//           jwt    → JwtFilter  (valida Bearer token)
-//           jwt:admin  → JWT + solo rol 'admin'
-//           jwt:cajero → JWT + roles 'cajero' y 'admin' (jerarquía)
+// Filtros:  mcCors â†’ CorsFilter custom (CORS headers + preflight OPTIONS)
+//           jwt    â†’ JwtFilter  (valida Bearer token)
 //
-// Clientes: Frontend Node.js | App Móvil Expo Go
+// Clientes: Frontend Node.js | App MÃ³vil Expo Go
 // -----------------------------------------------------------------------
 
 // -----------------------------------------------------------------------
-// AUTH — Sin protección JWT (rutas públicas de la API)
+// 404 GLOBAL JSON â€” Para cualquier endpoint inexistente de la API
+// (Debe estar FUERA del grupo para no interferir con las rutas definidas)
 // -----------------------------------------------------------------------
-$routes->group('api/v1', ['filter' => 'cors'], function (RouteCollection $routes) {
+$routes->set404Override(function () {
+    throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+});
 
-    // Swagger UI y Especificación OpenAPI
-    $routes->get('docs', '\App\Controllers\DocsController::index');
+// -----------------------------------------------------------------------
+// AUTH â€” Sin protecciÃ³n JWT (rutas pÃºblicas de la API)
+// -----------------------------------------------------------------------
+$routes->group('api/v1', ['filter' => 'mcCors'], function (RouteCollection $routes) {
 
     // POST /api/v1/auth/login
-    // REGLA 3: Aplicar filtro throttler para prevenir fuerza bruta (máximo 4 intentos por minuto por defecto)
+    // Rate Limiting: mÃ¡ximo 4 intentos por minuto por IP
     $routes->post('auth/login', 'Api\AuthController::login', ['filter' => 'throttler']);
 
-    // GET  /api/v1/auth/me   ← Requiere JWT
+    // GET  /api/v1/auth/me   â† Requiere JWT
     $routes->get('auth/me', 'Api\AuthController::me', ['filter' => 'jwt']);
 
     // -----------------------------------------------------------------------
     // CLIENTES [jwt requerido para todos los roles]
     // -----------------------------------------------------------------------
     $routes->group('clientes', ['filter' => 'jwt'], function (RouteCollection $routes) {
-        // GET    /api/v1/clientes                   → listado paginado + búsqueda
+        // GET    /api/v1/clientes                   â†’ listado paginado + bÃºsqueda
         $routes->get('/', 'Api\ClientesController::index');
 
-        // GET    /api/v1/clientes/documento/:doc    → búsqueda rápida por documento
+        // GET    /api/v1/clientes/documento/:doc    â†’ bÃºsqueda rÃ¡pida por documento
         $routes->get('documento/(:segment)', 'Api\ClientesController::buscarPorDocumento/$1');
 
-        // GET    /api/v1/clientes/:id               → detalle de un cliente
+        // GET    /api/v1/clientes/:id               â†’ detalle de un cliente
         $routes->get('(:num)', 'Api\ClientesController::show/$1');
 
-        // POST   /api/v1/clientes                   → crear cliente
+        // POST   /api/v1/clientes                   â†’ crear cliente
         $routes->post('/', 'Api\ClientesController::create');
 
-        // PUT    /api/v1/clientes/:id               → actualizar cliente
+        // PUT    /api/v1/clientes/:id               â†’ actualizar cliente
         $routes->put('(:num)', 'Api\ClientesController::update/$1');
     });
 
@@ -60,47 +68,47 @@ $routes->group('api/v1', ['filter' => 'cors'], function (RouteCollection $routes
     // PEDIDOS [jwt requerido para todos los roles]
     // -----------------------------------------------------------------------
     $routes->group('pedidos', ['filter' => 'jwt'], function (RouteCollection $routes) {
-        // GET    /api/v1/pedidos                    → v_pedidos_activos
+        // GET    /api/v1/pedidos                    â†’ v_pedidos_activos
         $routes->get('/', 'Api\PedidosController::index');
 
-        // GET    /api/v1/pedidos/:id                → pedido completo con detalles y pagos
+        // GET    /api/v1/pedidos/:id                â†’ pedido completo con detalles y pagos
         $routes->get('(:num)', 'Api\PedidosController::show/$1');
 
-        // POST   /api/v1/pedidos                    → sp_registrar_recepcion + detalles
+        // POST   /api/v1/pedidos                    â†’ sp_registrar_recepcion + detalles
         $routes->post('/', 'Api\PedidosController::crearRecepcion');
 
-        // GET    /api/v1/pedidos/:id/ticket         → datos estructurados para ticket imprimible
+        // GET    /api/v1/pedidos/:id/ticket         â†’ datos estructurados para ticket imprimible
         $routes->get('(:num)/ticket', 'Api\PedidosController::obtenerTicket/$1');
 
-        // PATCH  /api/v1/pedidos/:id/estado         → cambio de estado (dispara triggers)
+        // PATCH  /api/v1/pedidos/:id/estado         â†’ cambio de estado (dispara triggers)
         $routes->patch('(:num)/estado', 'Api\PedidosController::cambiarEstado/$1');
     });
 
     // -----------------------------------------------------------------------
-    // PAGOS [jwt requerido — cobro solo por cajero/admin]
+    // PAGOS [jwt requerido â€” cobro solo por cajero/admin]
     // -----------------------------------------------------------------------
     $routes->group('pagos', ['filter' => 'jwt'], function (RouteCollection $routes) {
-        // POST   /api/v1/pagos                      → registrar pago presencial (SQLSTATE 45000)
+        // POST   /api/v1/pagos                      â†’ registrar pago presencial (SQLSTATE 45000)
         $routes->post('/', 'Api\PagosController::registrarPago');
 
-        // GET    /api/v1/pagos/pedido/:idPedido     → historial y saldo pendiente
+        // GET    /api/v1/pagos/pedido/:idPedido     â†’ historial y saldo pendiente
         $routes->get('pedido/(:num)', 'Api\PagosController::obtenerHistorial/$1');
 
-        // GET    /api/v1/pagos/:idPago/recibo       → datos del recibo para re-impresión
+        // GET    /api/v1/pagos/:idPago/recibo       â†’ datos del recibo para re-impresiÃ³n
         $routes->get('(:num)/recibo', 'Api\PagosController::obtenerRecibo/$1');
     });
 
     // -----------------------------------------------------------------------
-    // REPORTES [jwt:cajero — requiere al menos rol cajero]
+    // REPORTES [jwt requerido]
     // -----------------------------------------------------------------------
     $routes->group('reportes', ['filter' => 'jwt'], function (RouteCollection $routes) {
-        // GET    /api/v1/reportes/dashboard         → resumen del día (todos los roles)
+        // GET    /api/v1/reportes/dashboard         â†’ resumen del dÃ­a (todos los roles)
         $routes->get('dashboard', 'Api\ReportesController::dashboard');
 
-        // GET    /api/v1/reportes/diario            → v_reporte_diario (cajero, admin)
+        // GET    /api/v1/reportes/diario            â†’ v_reporte_diario (cajero, admin)
         $routes->get('diario', 'Api\ReportesController::reporteDiario');
 
-        // GET    /api/v1/reportes/mensual           → reporte mensual (solo admin)
+        // GET    /api/v1/reportes/mensual           â†’ reporte mensual (solo admin)
         $routes->get('mensual', 'Api\ReportesController::reporteMensual');
 
         // GET    /api/v1/reportes/cierre-caja       → sp_cierre_caja ROLLUP (cajero, admin)
@@ -108,20 +116,48 @@ $routes->group('api/v1', ['filter' => 'cors'], function (RouteCollection $routes
 
         // GET    /api/v1/reportes/servicios         → ranking servicios (solo admin)
         $routes->get('servicios', 'Api\ReportesController::serviciosMasSolicitados');
+
+        // GET    /api/v1/reportes/clientes-frecuentes → Top 5-10 clientes con más pedidos y dinero (solo admin)
+        $routes->get('clientes-frecuentes', 'Api\ReportesController::clientesFrecuentes');
+
+        // GET    /api/v1/reportes/evolucion         → Gráfico de Barras
+        $routes->get('evolucion', 'Api\ReportesController::evolucion');
+
+        // GET    /api/v1/reportes/distribucion      → Gráfico Circular
+        $routes->get('distribucion', 'Api\ReportesController::distribucion');
+
+        // GET    /api/v1/reportes/entregas-urgentes → Entregas Urgentes
+        $routes->get('entregas-urgentes', 'Api\ReportesController::entregasUrgentes');
+    // -----------------------------------------------------------------------
     });
 
     // -----------------------------------------------------------------------
-    // Ruta catch-all para endpoints inexistentes dentro de /api/v1/
+    // SERVICIOS [jwt requerido]
     // -----------------------------------------------------------------------
-    $routes->set404Override(function () {
-        return service('response')
-            ->setStatusCode(404)
-            ->setJSON([
-                'success' => false,
-                'status'  => 404,
-                'message' => 'Endpoint no encontrado en la API de MaryClean.',
-                'data'    => null,
-                'errors'  => null,
-            ]);
+    $routes->group('servicios/prendas', ['filter' => 'jwt'], function (RouteCollection $routes) {
+        $routes->get('/', 'Api\ServiciosController::indexPrendas');
+        $routes->post('/', 'Api\ServiciosController::createPrenda');
+        $routes->put('(:num)', 'Api\ServiciosController::updatePrenda/$1');
+    });
+
+    // -----------------------------------------------------------------------
+    // EMPLEADOS [jwt:admin — solo administradores]
+    // -----------------------------------------------------------------------
+    $routes->group('empleados', ['filter' => ['jwt:admin', 'throttler:60,60']], function (RouteCollection $routes) {
+        $routes->get('/', 'Api\EmpleadosController::index');
+        $routes->post('/', 'Api\EmpleadosController::create', ['filter' => 'throttler:10,60']);
+        $routes->patch('(:num)/estado', 'Api\EmpleadosController::cambiarEstado/$1');
+        $routes->patch('(:num)/password', 'Api\EmpleadosController::cambiarPassword/$1');
+        $routes->delete('(:num)', 'Api\EmpleadosController::delete/$1');
+    });
+
+    // -----------------------------------------------------------------------
+    // SUCURSALES [jwt:admin — solo administradores]
+    // -----------------------------------------------------------------------
+    $routes->group('sucursales', ['filter' => ['jwt:admin', 'throttler:120,60']], function (RouteCollection $routes) {
+        $routes->get('/', 'Api\SucursalesController::index');
+        $routes->get('(:num)', 'Api\SucursalesController::show/$1');
+        $routes->post('/', 'Api\SucursalesController::create', ['filter' => 'throttler:30,60']);
+        $routes->put('(:num)', 'Api\SucursalesController::update/$1');
     });
 });

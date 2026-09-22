@@ -69,8 +69,7 @@ class JwtFilter implements FilterInterface
             $payload = $jwt->validarToken($token);
 
             // 3. Inyectar el payload en la petición para uso en los controladores
-            //    Accesible como: $this->request->jwtPayload
-            $request->jwtPayload = $payload;
+            \App\Libraries\JwtContext::set($payload);
 
             // 4. Verificar rol si se pasaron argumentos al filtro
             //    Uso: ['filter' => 'jwt:admin'] o ['filter' => 'jwt:admin,cajero']

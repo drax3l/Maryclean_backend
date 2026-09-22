@@ -32,7 +32,9 @@ class SucursalModel extends Model
     // ---------------------------------------------------------------
     // Timestamps (la tabla no tiene columnas de timestamp nativas)
     // ---------------------------------------------------------------
-    protected $useTimestamps = false;
+    protected $useTimestamps = true;
+    protected $createdField  = 'created_at';
+    protected $updatedField  = 'updated_at';
 
     // ---------------------------------------------------------------
     // Reglas de Validación
