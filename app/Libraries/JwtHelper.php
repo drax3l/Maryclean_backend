@@ -54,7 +54,7 @@ class JwtHelper
 
     public function __construct()
     {
-        $this->secret  = env('jwt.secret', 'maryclean_secret_key_change_in_production_32chars');
+        $this->secret  = $_ENV['JWT_SECRET'] ?? env('jwt.secret', 'maryclean_secret_key_change_in_production_32chars');
         // REGLA 2: Tiempo de expiración dinámico (default: 28800 segundos / 8 horas)
         $this->ttl     = (int) env('jwt.ttl', 28800);
         $this->issuer  = env('jwt.issuer', 'maryclean-api');

@@ -59,7 +59,7 @@ class CorsFilter implements FilterInterface
     public function __construct()
     {
         // Cargar orígenes desde .env o usar defaults de desarrollo
-        $origensRaw = env('cors.allowedOrigins', 'http://localhost:3000,http://localhost:8081');
+        $origensRaw = $_ENV['CORS_ORIGINS'] ?? env('cors.allowedOrigins', 'http://localhost:3000,http://localhost:8081');
         $this->allowedOrigins = array_map('trim', explode(',', $origensRaw));
 
         $this->allowedMethods = env('cors.allowedMethods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
