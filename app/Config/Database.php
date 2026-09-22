@@ -26,10 +26,10 @@ class Database extends Config
      */
     public array $default = [
         'DSN'          => '',
-        'hostname'     => $_ENV['DB_HOST'] ?? 'localhost',
-        'username'     => $_ENV['DB_USER'] ?? 'root',
-        'password'     => $_ENV['DB_PASS'] ?? '',
-        'database'     => $_ENV['DB_NAME'] ?? 'lavanderia',
+        'hostname'     => 'localhost',
+        'username'     => 'root',
+        'password'     => '',
+        'database'     => 'lavanderia',
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
         'pConnect'     => false,
@@ -37,11 +37,11 @@ class Database extends Config
         'charset'      => 'utf8mb4',
         'DBCollat'     => 'utf8mb4_unicode_ci',
         'swapPre'      => '',
-        'encrypt'      => isset($_ENV['DB_ENCRYPT']) ? (bool)$_ENV['DB_ENCRYPT'] : false,
+        'encrypt'      => false,
         'compress'     => false,
         'strictOn'     => false,
         'failover'     => [],
-        'port'         => $_ENV['DB_PORT'] ?? 3306,
+        'port'         => 3306,
         'numberNative' => false,
         'dateFormat'   => [
             'date'     => 'Y-m-d',
@@ -49,6 +49,17 @@ class Database extends Config
             'time'     => 'H:i:s',
         ],
     ];
+
+    public function __construct()
+    {
+        parent::__construct();
+        if (isset($_ENV['DB_HOST'])) $this->default['hostname'] = $_ENV['DB_HOST'];
+        if (isset($_ENV['DB_USER'])) $this->default['username'] = $_ENV['DB_USER'];
+        if (isset($_ENV['DB_PASS'])) $this->default['password'] = $_ENV['DB_PASS'];
+        if (isset($_ENV['DB_NAME'])) $this->default['database'] = $_ENV['DB_NAME'];
+        if (isset($_ENV['DB_PORT'])) $this->default['port'] = $_ENV['DB_PORT'];
+        if (isset($_ENV['DB_ENCRYPT'])) $this->default['encrypt'] = (bool)$_ENV['DB_ENCRYPT'];
+    }
 
     //    /**
     //     * Sample database connection for SQLite3.
