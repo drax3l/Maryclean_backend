@@ -200,7 +200,7 @@ class Database extends Config
         if (isset($_ENV['DB_USER'])) $this->default['username'] = $_ENV['DB_USER'];
         if (isset($_ENV['DB_PASS'])) $this->default['password'] = $_ENV['DB_PASS'];
         if (isset($_ENV['DB_NAME'])) $this->default['database'] = $_ENV['DB_NAME'];
-        if (isset($_ENV['DB_PORT'])) $this->default['port'] = $_ENV['DB_PORT'];
+        if (isset($_ENV['DB_PORT'])) $this->default['port'] = (int)$_ENV['DB_PORT'];
         if (isset($_ENV['DB_ENCRYPT'])) $this->default['encrypt'] = (bool)$_ENV['DB_ENCRYPT'];
 
         // Ensure that we always set the database group to 'tests' if
