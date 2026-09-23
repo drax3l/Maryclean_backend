@@ -141,11 +141,10 @@ class CorsFilter implements FilterInterface
     private function esOrigenPermitido(string $origin): bool
     {
         if (empty($origin)) {
-            return false;
+            return true; // Mobile apps often don't send origin
         }
 
-        // Permitir todos los orígenes solo en desarrollo
-        if (ENVIRONMENT === 'development' && in_array('*', $this->allowedOrigins, true)) {
+        if (in_array('*', $this->allowedOrigins, true)) {
             return true;
         }
 
