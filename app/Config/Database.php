@@ -50,16 +50,7 @@ class Database extends Config
         ],
     ];
 
-    public function __construct()
-    {
-        parent::__construct();
-        if (isset($_ENV['DB_HOST'])) $this->default['hostname'] = $_ENV['DB_HOST'];
-        if (isset($_ENV['DB_USER'])) $this->default['username'] = $_ENV['DB_USER'];
-        if (isset($_ENV['DB_PASS'])) $this->default['password'] = $_ENV['DB_PASS'];
-        if (isset($_ENV['DB_NAME'])) $this->default['database'] = $_ENV['DB_NAME'];
-        if (isset($_ENV['DB_PORT'])) $this->default['port'] = $_ENV['DB_PORT'];
-        if (isset($_ENV['DB_ENCRYPT'])) $this->default['encrypt'] = (bool)$_ENV['DB_ENCRYPT'];
-    }
+
 
     //    /**
     //     * Sample database connection for SQLite3.
@@ -203,6 +194,14 @@ class Database extends Config
     public function __construct()
     {
         parent::__construct();
+        
+        // Inyectar variables limpias de Render
+        if (isset($_ENV['DB_HOST'])) $this->default['hostname'] = $_ENV['DB_HOST'];
+        if (isset($_ENV['DB_USER'])) $this->default['username'] = $_ENV['DB_USER'];
+        if (isset($_ENV['DB_PASS'])) $this->default['password'] = $_ENV['DB_PASS'];
+        if (isset($_ENV['DB_NAME'])) $this->default['database'] = $_ENV['DB_NAME'];
+        if (isset($_ENV['DB_PORT'])) $this->default['port'] = $_ENV['DB_PORT'];
+        if (isset($_ENV['DB_ENCRYPT'])) $this->default['encrypt'] = (bool)$_ENV['DB_ENCRYPT'];
 
         // Ensure that we always set the database group to 'tests' if
         // we are currently running an automated test suite, so that
