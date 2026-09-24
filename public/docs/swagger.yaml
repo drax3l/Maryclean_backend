@@ -455,3 +455,152 @@ paths:
       responses:
         '201':
           description: Sucursal creada
+
+  # ----------------------------------------------------------------------
+  # SERVICIOS — Categorías Padre
+  # ----------------------------------------------------------------------
+  /api/v1/servicios:
+    get:
+      tags: [Servicios]
+      summary: Listar categorías de servicio con sus prendas anidadas
+      description: >
+        Devuelve todos los tipos de servicio (Lavado Simple, Lavado en Seco, etc.)
+        con el array de prendas que contiene cada uno. Útil para poblar dropdowns
+        en "Nueva Prenda" y el selector agrupado de la App Móvil.
+      responses:
+        '200':
+          description: Lista de servicios con prendas
+          content:
+            application/json:
+              example:
+                success: true
+                status: 200
+                message: "Catálogo de servicios obtenido correctamente."
+                data:
+                  - idServicio: 1
+                    nombre: "Lavado Simple"
+                    tiempoEstimado: "2"
+                    prendas:
+                      - idPrenda: 1
+                        nombrePrenda: "Camisa"
+                        precio: "5.00"
+                        estado: "1"
+                  - idServicio: 2
+                    nombre: "Lavado en Seco"
+                    tiempoEstimado: "6"
+                    prendas:
+                      - idPrenda: 5
+                        nombrePrenda: "Abrigo"
+                        precio: "15.00"
+                        estado: "1"
+
+  /api/v1/servicios/{id}:
+    get:
+      tags: [Servicios]
+      summary: Ver detalle de un servicio con sus prendas
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+          description: ID del servicio
+      responses:
+        '200':
+          description: Servicio con prendas anidadas
+        '404':
+          description: Servicio no encontrado
+
+  # ----------------------------------------------------------------------
+  # PRENDAS — Items del Catálogo
+  # ----------------------------------------------------------------------
+  /api/v1/servicios/prendas:
+    get:
+      tags: [Servicios]
+      summary: Catálogo completo de prendas (todas las categorías)
+      description: >
+        Devuelve un array plano con todas las prendas activas e inactivas,
+        incluyendo el nombre de su servicio padre. Útil para el selector de
+        prendas en el formulario de "Registrar Pedido".
+      responses:
+        '200':
+          description: Lista de prendas
+          content:
+            application/json:
+              example:
+                success: true
+                status: 200
+                message: "Catálogo de prendas obtenido correctamente."
+                data:
+                  - idPrenda: "1"
+                    nombrePrenda: "Camisa"
+                    precio: "5.00"
+                    estado: "1"
+                    servicio: "Lavado Simple"
+                  - idPrenda: "5"
+                    nombrePrenda: "Abrigo"
+                    precio: "15.00"
+                    estado: "1"
+                    servicio: "Lavado en Seco"
+    post:
+      tags: [Servicios]
+      summary: Crear nueva prenda en el catálogo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombrePrenda, precio, idServicio]
+              properties:
+                nombrePrenda:
+                  type: string
+                  example: "Saco"
+                precio:
+                  type: number
+                  example: 20.00
+                idServicio:
+                  type: integer
+                  description: ID de la categoría a la que pertenece
+                  example: 1
+      responses:
+        '201':
+          description: Prenda creada exitosamente
+        '422':
+          description: Error de validación (nombre requerido, precio > 0, idServicio debe existir)
+
+  /api/v1/servicios/prendas/{id}:
+    put:
+      tags: [Servicios]
+      summary: Editar prenda (precio, nombre o estado)
+      description: >
+        Actualización parcial. Solo envía los campos que deseas cambiar.
+        Para desactivar una prenda envía `estado: 0`. Para reactivarla, `estado: 1`.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+          description: ID de la prenda a editar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombrePrenda:
+                  type: string
+                  example: "Camisa clásica"
+                precio:
+                  type: number
+                  example: 6.50
+                estado:
+                  type: integer
+                  enum: [0, 1]
+                  description: "0 = Inactivo, 1 = Activo"
+                  example: 0
+      responses:
+        '200':
+          description: Prenda actualizada correctamente
+        '404':
+          description: Prenda no encontrada

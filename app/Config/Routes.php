@@ -132,12 +132,22 @@ $routes->group('api/v1', ['filter' => 'mcCors'], function (RouteCollection $rout
     });
 
     // -----------------------------------------------------------------------
-    // SERVICIOS [jwt requerido]
+    // SERVICIOS [jwt requerido] — Categorías padre + CRUD de prendas
     // -----------------------------------------------------------------------
-    $routes->group('servicios/prendas', ['filter' => 'jwt'], function (RouteCollection $routes) {
-        $routes->get('/', 'Api\ServiciosController::indexPrendas');
-        $routes->post('/', 'Api\ServiciosController::createPrenda');
-        $routes->put('(:num)', 'Api\ServiciosController::updatePrenda/$1');
+
+    // GET  /api/v1/servicios            → lista de categorías con prendas anidadas
+    // GET  /api/v1/servicios/{id}       → detalle de una categoría con sus prendas
+    $routes->group('servicios', ['filter' => 'jwt'], function (RouteCollection $routes) {
+        $routes->get('/',         'Api\ServiciosController::indexServicios');
+        $routes->get('(:num)',    'Api\ServiciosController::showServicio/$1');
+
+        // CRUD de prendas dentro de un servicio
+        // GET  /api/v1/servicios/prendas       → catálogo completo (todas las prendas)
+        // POST /api/v1/servicios/prendas       → crear nueva prenda
+        // PUT  /api/v1/servicios/prendas/{id}  → editar prenda (precio, nombre, estado)
+        $routes->get('prendas',          'Api\ServiciosController::indexPrendas');
+        $routes->post('prendas',         'Api\ServiciosController::createPrenda');
+        $routes->put('prendas/(:num)',   'Api\ServiciosController::updatePrenda/$1');
     });
 
     // -----------------------------------------------------------------------

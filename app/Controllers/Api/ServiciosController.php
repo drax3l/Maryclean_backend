@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers\Api;
 
 use App\Models\ServicioPrendaModel;
+use App\Models\ServicioModel;
 use Exception;
 
 /**
@@ -18,11 +19,57 @@ use Exception;
 class ServiciosController extends BaseApiController
 {
     protected ServicioPrendaModel $prendaModel;
+    protected ServicioModel       $servicioModel;
 
     public function __construct()
     {
-        $this->prendaModel = new ServicioPrendaModel();
+        $this->prendaModel   = new ServicioPrendaModel();
+        $this->servicioModel = new ServicioModel();
     }
+
+    // ===================================================================
+    // MÓDULO: SERVICIOS (Categorías Padre)
+    // ===================================================================
+
+    /**
+     * GET /api/v1/servicios
+     * Devuelve la lista de todos los servicios padre (Lavado Simple, etc.)
+     * con sus prendas anidadas. Útil para formularios de "Nueva Prenda"
+     * y para el selector agrupado de la App Móvil.
+     */
+    public function indexServicios()
+    {
+        try {
+            $servicios = $this->servicioModel->getCatalogoCompleto();
+            return $this->respondSuccess($servicios, 'Catálogo de servicios obtenido correctamente.');
+        } catch (Exception $e) {
+            return $this->handleDbException($e, 'Error al obtener los servicios.');
+        }
+    }
+
+    /**
+     * GET /api/v1/servicios/{id}
+     * Devuelve un servicio específico con todas sus prendas anidadas.
+     */
+    public function showServicio($id = null)
+    {
+        try {
+            $id = (int) $id;
+            $servicio = $this->servicioModel->getServicioConPrendas($id);
+
+            if (! $servicio) {
+                return $this->respondNotFound('Servicio no encontrado.');
+            }
+
+            return $this->respondSuccess($servicio, 'Servicio obtenido correctamente.');
+        } catch (Exception $e) {
+            return $this->handleDbException($e, 'Error al obtener el servicio.');
+        }
+    }
+
+    // ===================================================================
+    // MÓDULO: PRENDAS (Items del Catálogo)
+    // ===================================================================
 
     /**
      * GET /api/v1/servicios/prendas
