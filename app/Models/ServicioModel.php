@@ -72,7 +72,7 @@ class ServicioModel extends Model
         $prendaModel = new ServicioPrendaModel();
 
         foreach ($servicios as &$servicio) {
-            $servicio['prendas'] = $prendaModel->getPrendasPorServicio($servicio['idServicio']);
+            $servicio['prendas'] = $prendaModel->getPrendasPorServicio((int) $servicio['idServicio']);
         }
 
         return $servicios;
