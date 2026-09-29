@@ -33,9 +33,13 @@ $routes->set404Override(function () {
 });
 
 // -----------------------------------------------------------------------
-// AUTH â€” Sin protecciÃ³n JWT (rutas pÃºblicas de la API)
+// AUTH 
 // -----------------------------------------------------------------------
 $routes->group('api/v1', ['filter' => 'mcCors'], function (RouteCollection $routes) {
+
+    // Catch-all OPTIONS para que el preflight CORS no arroje 404
+    $routes->options('(:any)', static function () {});
+    $routes->options('/', static function () {});
 
     // POST /api/v1/auth/login
     // Rate Limiting: mÃ¡ximo 4 intentos por minuto por IP
