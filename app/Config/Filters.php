@@ -83,14 +83,14 @@ class Filters extends BaseFilters
      */
     public array $globals = [
         'before' => [
-            // 'honeypot',
+            // mcCors responde a preflights OPTIONS y agrega headers CORS a toda la API
+            'mcCors',
             // CSRF se aplica a rutas web, pero se EXCLUYE de la API REST (usa JWT en su lugar)
             'csrf' => ['except' => ['api/*', 'api/v1/*']],
-            // 'invalidchars',
         ],
         'after' => [
-            // 'honeypot',
-            // 'secureheaders',
+            // mcCors también debe ejecutarse en after() para agregar headers a respuestas reales
+            'mcCors',
         ],
     ];
 

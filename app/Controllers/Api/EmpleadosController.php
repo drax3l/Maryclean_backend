@@ -55,6 +55,10 @@ class EmpleadosController extends BaseApiController
             return $this->respondValidationError($this->validator->getErrors());
         }
 
+        if (empty(trim($body['password'] ?? '')) || strlen(trim($body['password'])) < 6) {
+            return $this->respondValidationError(['password' => 'La contraseña no puede estar vacía o contener solo espacios.']);
+        }
+
         // Hashear password
         $body['password'] = password_hash($body['password'], PASSWORD_BCRYPT, ['cost' => 12]);
         $body['activo']   = 1;
@@ -112,8 +116,8 @@ class EmpleadosController extends BaseApiController
         $id = (int)$id;
 
         $body = $this->getJsonBody();
-        if (!isset($body['password']) || strlen($body['password']) < 6) {
-            return $this->respondValidationError(['password' => 'La contraseña es requerida y debe tener al menos 6 caracteres.']);
+        if (!isset($body['password']) || empty(trim($body['password'])) || strlen(trim($body['password'])) < 6) {
+            return $this->respondValidationError(['password' => 'La contraseña es requerida y debe tener al menos 6 caracteres válidos.']);
         }
 
         $empleado = $this->empleadoModel->find($id);

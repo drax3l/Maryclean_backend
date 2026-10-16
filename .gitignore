@@ -21,6 +21,12 @@ $RECYCLE.BIN/
 .env.*
 env
 
+# Scripts locales con credenciales
+/check_db.php
+
+# Permitir plantilla de configuración sin secretos
+!.env.example
+
 # Dependencias y artefactos de build
 /vendor/
 /node_modules/

@@ -77,21 +77,19 @@ class CorsFilter implements FilterInterface
      */
     public function before(RequestInterface $request, $arguments = null): mixed
     {
-        $origin = $request->getHeaderLine('Origin');
+        $origin = $request->getHeaderLine('Origin') ?: '*';
 
         // Verificar si el origen es permitido
         $origenPermitido = $this->esOrigenPermitido($origin);
 
-        // Responder a peticiones OPTIONS (preflight)
+        // Responder a peticiones OPTIONS (preflight) — SIEMPRE con 204
         if ($request->getMethod() === 'options') {
             $response = service('response');
-            $response->setStatusCode(204); // No Content
+            $response->setStatusCode(204);
 
-            if ($origenPermitido) {
-                $response->setHeader('Access-Control-Allow-Origin', $origin);
-                $response->setHeader('Vary', 'Origin');
-            }
-
+            // Si el origen está permitido o es wildcard, reflejar el origen
+            $response->setHeader('Access-Control-Allow-Origin', $origenPermitido ? $origin : '');
+            $response->setHeader('Vary', 'Origin');
             $response->setHeader('Access-Control-Allow-Methods', $this->allowedMethods);
             $response->setHeader('Access-Control-Allow-Headers', $this->allowedHeaders);
             $response->setHeader('Access-Control-Max-Age', (string) $this->maxAge);
@@ -100,7 +98,6 @@ class CorsFilter implements FilterInterface
             return $response;
         }
 
-        // Para peticiones no-OPTIONS, los headers se agregan en after()
         return null;
     }
 

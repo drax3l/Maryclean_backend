@@ -167,6 +167,10 @@ class PedidosController extends BaseApiController
 
         $body = $this->getJsonBody();
 
+        if (empty($body['idCliente']) || !is_numeric($body['idCliente'])) {
+            return $this->respondError('El idCliente es obligatorio y debe ser numérico.', 400);
+        }
+
         if (! $this->validateData($body, $rules)) {
             return $this->respondValidationError($this->validator->getErrors());
         }
@@ -181,10 +185,11 @@ class PedidosController extends BaseApiController
 
         // Validar estructura de cada detalle
         foreach ($detalles as $i => $detalle) {
-            if (empty($detalle['idPrenda']) || empty($detalle['cantidad']) || $detalle['cantidad'] < 1) {
-                return $this->respondValidationError([
-                    "detalles[{$i}]" => 'Cada prenda debe tener idPrenda y cantidad (>0) válidos.',
-                ]);
+            if (!isset($detalle['idPrenda']) || !is_numeric($detalle['idPrenda'])) {
+                return $this->respondValidationError(["detalles[{$i}]" => 'idPrenda es obligatorio y numérico.']);
+            }
+            if (!isset($detalle['cantidad']) || !is_numeric($detalle['cantidad']) || (float)$detalle['cantidad'] <= 0) {
+                return $this->respondValidationError(["detalles[{$i}]" => 'La cantidad debe ser mayor a 0.']);
             }
         }
 

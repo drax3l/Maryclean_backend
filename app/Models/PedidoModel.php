@@ -265,6 +265,12 @@ class PedidoModel extends Model
         }
 
         // Solo actualiza el estado; el trigger se encarga de fechaEntrega y auditoría
+        if ($nuevoEstado === 'Entregado') {
+            $saldo = $this->getSaldoPendiente($idPedido);
+            if ($saldo > 0) {
+                throw new \InvalidArgumentException("No se puede entregar el pedido porque tiene un saldo pendiente de S/ " . number_format($saldo, 2));
+            }
+        }
         return $this->db->table($this->table)
             ->where('idPedido', $idPedido)
             ->update(['estado' => $nuevoEstado]);

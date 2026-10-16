@@ -110,13 +110,20 @@ class PagosController extends BaseApiController
 
         $body = $this->getJsonBody();
 
+        if (empty($body['idPedido']) || !is_numeric($body['idPedido'])) {
+            return $this->respondError('El idPedido es obligatorio y debe ser numérico.', ResponseInterface::HTTP_BAD_REQUEST);
+        }
+        if (!isset($body['monto']) || !is_numeric($body['monto'])) {
+            return $this->respondError('El monto es obligatorio y debe ser numérico.', ResponseInterface::HTTP_BAD_REQUEST);
+        }
+
         if (! $this->validateData($body, $rules)) {
             return $this->respondValidationError($this->validator->getErrors());
         }
 
         $idPedido = (int) $body['idPedido'];
         $monto    = (float) $body['monto'];
-        $metodo   = $body['metodo'];
+        $metodo   = trim($body['metodo'] ?? '');
 
         // Verificar que el pedido no esté ya Pagado o Cancelado
         $pedido = $this->pedidoModel->find($idPedido);

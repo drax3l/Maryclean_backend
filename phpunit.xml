@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <phpunit
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
@@ -24,9 +24,9 @@
         <testsuite name="App">
             <directory>./tests</directory>
         </testsuite>
-        <!-- Suite especÃ­fica para modelos de MaryClean -->
+        <!-- Suite específica para modelos de MaryClean -->
         <testsuite name="MaryClean Models">
-            <directory>./tests/app/Models</directory>
+            <directory>./tests/integration/Models</directory>
         </testsuite>
     </testsuites>
 
@@ -75,13 +75,13 @@
           vendor\bin\phpunit -testsuite "MaryClean Models"
         =====================================================================
         -->
-        <env name="database.tests.hostname" value="localhost"/>
-        <env name="database.tests.database" value="lavanderia_test"/>
-        <env name="database.tests.username" value="root"/>
-        <env name="database.tests.password" value=""/>
+        <env name="database.tests.hostname" value="mysql-1f03b7b7-lavanderia-maryclean.e.aivencloud.com"/>
+        <env name="database.tests.database" value="defaultdb_test"/>
+        <env name="database.tests.username" value="avnadmin"/>
+
         <env name="database.tests.DBDriver" value="MySQLi"/>
         <env name="database.tests.DBPrefix" value=""/>
-        <env name="database.tests.port" value="3306"/>
+        <env name="database.tests.port" value="23849"/>
         <env name="database.tests.charset" value="utf8mb4"/>
         <env name="database.tests.DBCollat" value="utf8mb4_unicode_ci"/>
     </php>

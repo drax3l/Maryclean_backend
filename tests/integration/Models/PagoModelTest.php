@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\App\Models;
+namespace Tests\Integration\Models;
 
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;

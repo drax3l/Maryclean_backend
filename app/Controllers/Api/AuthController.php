@@ -89,6 +89,10 @@ class AuthController extends BaseApiController
         $username = trim($body['username'] ?? '');
         $password = $body['password'] ?? '';
 
+        if (empty(trim($password))) {
+            return $this->respondValidationError(['password' => 'La contraseña no puede estar vacía o contener solo espacios.']);
+        }
+
         // Delegar autenticación al modelo
         $empleado = $this->empleadoModel->autenticar($username, $password);
 
