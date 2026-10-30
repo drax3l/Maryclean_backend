@@ -7,93 +7,81 @@ namespace App\Controllers\Api;
 use App\Models\PagoModel;
 use App\Models\PedidoModel;
 use CodeIgniter\HTTP\ResponseInterface;
-use CodeIgniter\Database\Exceptions\DatabaseException;
 
 /**
  * PagosController
  *
  * API REST para el sistema de cobro presencial de MaryClean.
- * Gestiona el registro de pagos en mostrador y la consulta del historial.
  *
- * COBRO EXCLUSIVAMENTE PRESENCIAL:
- * Los métodos soportados son los que se procesan en el mostrador físico:
- *   - Efectivo
- *   - Tarjeta (POS físico)
- *   - Yape/Plin (verificación manual del recepcionista)
+ * Permite:
+ * - Registrar pagos parciales.
+ * - Registrar el pago total restante.
+ * - Consultar historial de pagos.
+ * - Consultar total pagado y saldo pendiente.
+ * - Obtener el recibo de un pago.
  *
- * NO se integran pasarelas de pago externas ni APIs de cobro online.
+ * MÉTODOS DE PAGO:
+ * - Efectivo
+ * - Tarjeta
+ * - Yape/Plin
+ *
+ * SEGURIDAD:
+ * La validación se realiza en varias capas:
+ *
+ * 1. Controller:
+ *    valida estructura y tipos de datos.
+ *
+ * 2. PagoModel:
+ *    valida saldo pendiente y evita sobrepagos.
+ *
+ * 3. MySQL:
+ *    el trigger vuelve a comprobar el saldo antes del INSERT.
  *
  * ENDPOINTS:
- *   POST /api/v1/pagos                           → registrarPago()    [jwt: cajero, admin]
- *   GET  /api/v1/pagos/pedido/{idPedido}         → obtenerHistorial() [jwt]
- *   GET  /api/v1/pagos/{idPago}/recibo           → obtenerRecibo()    [jwt: cajero, admin]
  *
- * TRIGGER IMPLICADO:
- *   registrarPago() → trg_pago_antes_insertar_validar: Si monto > saldo,
- *                     lanza SQLSTATE '45000'. PagoModel lo captura y devuelve
- *                     array{success: false, codigo_error: SOBREPAGO_TRIGGER_45000}.
- *                  → trg_pago_despues_insertar_estado: Si suma de pagos >= total,
- *                     cambia Pedido.estado = 'Pagado' automáticamente.
- *
- * THIN CONTROLLER:
- * La lógica de validación de sobrepago está en PagoModel::registrarPago().
- * Este controlador solo mapea el resultado del modelo a HTTP responses.
- *
- * @package App\Controllers\Api
+ * POST /api/v1/pagos
+ * GET  /api/v1/pagos/pedido/{idPedido}
+ * GET  /api/v1/pagos/{idPago}/recibo
  */
 class PagosController extends BaseApiController
 {
-    private PagoModel   $pagoModel;
+    private PagoModel $pagoModel;
     private PedidoModel $pedidoModel;
 
     public function __construct()
     {
-        $this->pagoModel   = new PagoModel();
+        $this->pagoModel = new PagoModel();
         $this->pedidoModel = new PedidoModel();
     }
 
-    // ---------------------------------------------------------------
+
+    // ===============================================================
     // POST /api/v1/pagos
-    // ---------------------------------------------------------------
+    // ===============================================================
 
     /**
-     * Registra un pago presencial en mostrador.
-     * Captura el error SQLSTATE '45000' del trigger de validación de saldo
-     * y lo convierte en una respuesta HTTP 422 estructurada.
+     * Registra un pago o adelanto sobre un pedido existente.
      *
-     * ACCESO: Roles 'cajero' y 'admin' únicamente.
+     * Ejemplo:
      *
-     * REQUEST (JSON):
      * {
-     *   "idPedido": 2,
-     *   "monto":    33.00,
-     *   "metodo":   "Efectivo"
+     *   "idPedido": 3,
+     *   "monto": 2.00,
+     *   "metodo": "Efectivo"
      * }
      *
-     * RESPONSE 201 (éxito):
-     * {
-     *   "success": true,
-     *   "message": "Pago registrado correctamente.",
-     *   "data": {
-     *     "idPago":       5,
-     *     "recibo":       { ... datos del recibo para imprimir ... },
-     *     "pedidoEstado": "Pagado"
-     *   }
-     * }
+     * Permite múltiples pagos mientras:
      *
-     * RESPONSE 422 (sobrepago — SQLSTATE 45000):
-     * {
-     *   "success": false,
-     *   "status":  422,
-     *   "message": "El monto (S/ 50.00) supera el saldo pendiente (S/ 33.00).",
-     *   "errors":  { "codigo_error": "SOBREPAGO_TRIGGER_45000" }
-     * }
+     * monto <= saldo pendiente
      *
      * @return ResponseInterface
      */
     public function registrarPago(): ResponseInterface
     {
-        // Verificar rol (solo cajero y admin pueden cobrar)
+        // -----------------------------------------------------------
+        // Seguridad por rol
+        // -----------------------------------------------------------
+
         if (! $this->tieneRol('cajero', 'admin')) {
             return $this->respondError(
                 'No tiene permisos para registrar pagos. Rol requerido: cajero o admin.',
@@ -101,166 +89,641 @@ class PagosController extends BaseApiController
             );
         }
 
-        // Validar campos del request
-        $rules = [
-            'idPedido' => 'required|integer|is_not_unique[Pedido.idPedido]',
-            'monto'    => 'required|decimal|greater_than[0]',
-            'metodo'   => 'required|in_list[Efectivo,Tarjeta,Yape/Plin]',
-        ];
+
+        // -----------------------------------------------------------
+        // Obtener JSON
+        // -----------------------------------------------------------
 
         $body = $this->getJsonBody();
 
-        if (empty($body['idPedido']) || !is_numeric($body['idPedido'])) {
-            return $this->respondError('El idPedido es obligatorio y debe ser numérico.', ResponseInterface::HTTP_BAD_REQUEST);
-        }
-        if (!isset($body['monto']) || !is_numeric($body['monto'])) {
-            return $this->respondError('El monto es obligatorio y debe ser numérico.', ResponseInterface::HTTP_BAD_REQUEST);
-        }
-
-        if (! $this->validateData($body, $rules)) {
-            return $this->respondValidationError($this->validator->getErrors());
-        }
-
-        $idPedido = (int) $body['idPedido'];
-        $monto    = (float) $body['monto'];
-        $metodo   = trim($body['metodo'] ?? '');
-
-        // Verificar que el pedido no esté ya Pagado o Cancelado
-        $pedido = $this->pedidoModel->find($idPedido);
-
-        if (in_array($pedido['estado'] ?? '', ['Pagado', 'Cancelado'], true)) {
+        if (! is_array($body)) {
             return $this->respondError(
-                "No se puede cobrar un pedido con estado '{$pedido['estado']}'.",
+                'El cuerpo de la solicitud debe contener un JSON válido.',
                 ResponseInterface::HTTP_BAD_REQUEST
             );
         }
 
-        // Delegar el registro al modelo (que captura SQLSTATE 45000 internamente)
-        $resultado = $this->pagoModel->registrarPago($idPedido, $monto, $metodo);
 
-        // Mapear el resultado del modelo a la respuesta HTTP correcta
+        // -----------------------------------------------------------
+        // Reglas de validación
+        // -----------------------------------------------------------
+
+        $rules = [
+            'idPedido' =>
+                'required|integer|is_not_unique[Pedido.idPedido]',
+
+            'monto' =>
+                'required|decimal|greater_than[0]',
+
+            'metodo' =>
+                'required|in_list[Efectivo,Tarjeta,Yape/Plin]',
+        ];
+
+
+        // -----------------------------------------------------------
+        // Mensajes en español
+        // -----------------------------------------------------------
+
+        $messages = [
+
+            'idPedido' => [
+                'required' =>
+                    'El pedido es obligatorio.',
+
+                'integer' =>
+                    'El identificador del pedido debe ser un número entero válido.',
+
+                'is_not_unique' =>
+                    'El pedido especificado no existe.',
+            ],
+
+
+            'monto' => [
+                'required' =>
+                    'El monto del pago es obligatorio.',
+
+                'decimal' =>
+                    'El monto debe ser un número válido.',
+
+                'greater_than' =>
+                    'El monto del pago debe ser mayor a S/ 0.00.',
+            ],
+
+
+            'metodo' => [
+                'required' =>
+                    'El método de pago es obligatorio.',
+
+                'in_list' =>
+                    'Seleccione un método de pago válido: Efectivo, Tarjeta o Yape/Plin.',
+            ],
+        ];
+
+
+        // -----------------------------------------------------------
+        // Ejecutar validación
+        // -----------------------------------------------------------
+
+        if (! $this->validateData(
+            $body,
+            $rules,
+            $messages
+        )) {
+            return $this->respondValidationError(
+                $this->validator->getErrors()
+            );
+        }
+
+
+        // -----------------------------------------------------------
+        // Normalizar datos
+        // -----------------------------------------------------------
+
+        $idPedido = (int) $body['idPedido'];
+
+        $monto = round(
+            (float) $body['monto'],
+            2
+        );
+
+        $metodo = trim(
+            (string) $body['metodo']
+        );
+
+
+        // -----------------------------------------------------------
+        // Consultar pedido
+        // -----------------------------------------------------------
+
+        $pedido = $this->pedidoModel
+            ->select(
+                'idPedido, codigoTicket, total, estado'
+            )
+            ->find(
+                $idPedido
+            );
+
+
+        if ($pedido === null) {
+            return $this->respondNotFound(
+                "Pedido #{$idPedido} no encontrado."
+            );
+        }
+
+
+        // -----------------------------------------------------------
+        // Pedido cancelado
+        // -----------------------------------------------------------
+
+        if (
+            ($pedido['estado'] ?? '')
+            === 'Cancelado'
+        ) {
+            return $this->respondError(
+                'No se puede registrar un pago sobre un pedido cancelado.',
+                ResponseInterface::HTTP_UNPROCESSABLE_ENTITY
+            );
+        }
+
+
+        // -----------------------------------------------------------
+        // Pedido marcado como Pagado
+        //
+        // Esta validación se mantiene mientras el sistema actual
+        // utilice "Pagado" dentro de Pedido.estado.
+        //
+        // Más adelante conviene separar estado operativo y financiero.
+        // -----------------------------------------------------------
+
+        if (
+            ($pedido['estado'] ?? '')
+            === 'Pagado'
+        ) {
+            return $this->respondError(
+                'El pedido ya se encuentra completamente pagado.',
+                ResponseInterface::HTTP_UNPROCESSABLE_ENTITY
+            );
+        }
+
+
+        // -----------------------------------------------------------
+        // Registrar pago
+        //
+        // PagoModel valida nuevamente:
+        // - monto > 0
+        // - método
+        // - saldo disponible
+        // - sobrepago
+        //
+        // Además el trigger MySQL es la última barrera.
+        // -----------------------------------------------------------
+
+        $resultado =
+            $this->pagoModel->registrarPago(
+                $idPedido,
+                $monto,
+                $metodo
+            );
+
+
+        // -----------------------------------------------------------
+        // Manejar errores provenientes del modelo
+        // -----------------------------------------------------------
+
         if (! $resultado['success']) {
-            $codigoHttp = match ($resultado['codigo_error']) {
-                'SOBREPAGO_TRIGGER_45000' => ResponseInterface::HTTP_UNPROCESSABLE_ENTITY, // 422
-                'VALIDATION_ERROR'        => ResponseInterface::HTTP_BAD_REQUEST,           // 400
-                default                   => ResponseInterface::HTTP_INTERNAL_SERVER_ERROR,  // 500
+
+            $codigoError =
+                $resultado['codigo_error']
+                ?? 'UNKNOWN_ERROR';
+
+
+            $codigoHttp = match ($codigoError) {
+
+                // Sobrepago
+                'SOBREPAGO',
+                'SOBREPAGO_TRIGGER_45000' =>
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+
+
+                // Pedido sin saldo restante
+                'SIN_SALDO_PENDIENTE' =>
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+
+
+                // Datos inválidos
+                'MONTO_INVALIDO',
+                'METODO_INVALIDO',
+                'VALIDATION_ERROR' =>
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+
+
+                // Pedido inexistente
+                'PEDIDO_NO_EXISTE' =>
+                    ResponseInterface::HTTP_NOT_FOUND,
+
+
+                // Error inesperado
+                default =>
+                    ResponseInterface::HTTP_INTERNAL_SERVER_ERROR,
             };
 
+
             return $this->response
-                ->setStatusCode($codigoHttp)
+                ->setStatusCode(
+                    $codigoHttp
+                )
                 ->setJSON([
-                    'success' => false,
-                    'status'  => $codigoHttp,
-                    'message' => $resultado['mensaje'],
-                    'data'    => null,
-                    'errors'  => ['codigo_error' => $resultado['codigo_error']],
+                    'success' =>
+                        false,
+
+                    'status' =>
+                        $codigoHttp,
+
+                    'message' =>
+                        $resultado['mensaje'],
+
+                    'data' =>
+                        null,
+
+                    'errors' => [
+                        'codigo_error' =>
+                            $codigoError,
+                    ],
                 ]);
         }
 
-        // Pago exitoso: obtener recibo y estado actualizado del pedido
-        $idPago          = $resultado['idPago'];
-        $recibo          = $this->pagoModel->getDatosRecibo($idPago);
-        $pedidoRefrescado = $this->pedidoModel->select('idPedido, estado, total')->find($idPedido);
+
+        // -----------------------------------------------------------
+        // Pago registrado correctamente
+        // -----------------------------------------------------------
+
+        $idPago =
+            (int) $resultado['idPago'];
+
+
+        // -----------------------------------------------------------
+        // Obtener recibo actualizado
+        // -----------------------------------------------------------
+
+        $recibo =
+            $this->pagoModel
+                ->getDatosRecibo(
+                    $idPago
+                );
+
+
+        // -----------------------------------------------------------
+        // Consultar información financiera actualizada
+        // -----------------------------------------------------------
+
+        $totalPagado =
+            $this->pagoModel
+                ->getTotalPagado(
+                    $idPedido
+                );
+
+
+        $saldoPendiente =
+            $this->pedidoModel
+                ->getSaldoPendiente(
+                    $idPedido
+                );
+
+
+        // -----------------------------------------------------------
+        // Refrescar pedido después de triggers
+        // -----------------------------------------------------------
+
+        $pedidoRefrescado =
+            $this->pedidoModel
+                ->select(
+                    'idPedido, codigoTicket, estado, total'
+                )
+                ->find(
+                    $idPedido
+                );
+
+
+        // -----------------------------------------------------------
+        // Estado financiero calculado
+        // -----------------------------------------------------------
+
+        $estadoPago =
+            $this->calcularEstadoPago(
+                (float) (
+                    $pedidoRefrescado['total']
+                    ?? $pedido['total']
+                ),
+
+                $totalPagado
+            );
+
+
+        // -----------------------------------------------------------
+        // Respuesta
+        // -----------------------------------------------------------
 
         return $this->respondCreated(
             [
-                'idPago'       => $idPago,
-                'recibo'       => $recibo,
-                'pedidoEstado' => $pedidoRefrescado['estado'] ?? 'Desconocido',
+                'idPago' =>
+                    $idPago,
+
+
+                'idPedido' =>
+                    $idPedido,
+
+
+                'codigoTicket' =>
+                    $pedidoRefrescado['codigoTicket']
+                    ?? $pedido['codigoTicket']
+                    ?? null,
+
+
+                'recibo' =>
+                    $recibo,
+
+
+                // Estado operativo actual
+                'pedidoEstado' =>
+                    $pedidoRefrescado['estado']
+                    ?? 'Desconocido',
+
+
+                // Estado financiero calculado
+                'estadoPago' =>
+                    $estadoPago,
+
+
+                'total' =>
+                    round(
+                        (float) (
+                            $pedidoRefrescado['total']
+                            ?? $pedido['total']
+                        ),
+                        2
+                    ),
+
+
+                'total_pagado' =>
+                    round(
+                        $totalPagado,
+                        2
+                    ),
+
+
+                'saldo_pendiente' =>
+                    round(
+                        $saldoPendiente,
+                        2
+                    ),
             ],
+
             $resultado['mensaje']
         );
     }
 
-    // ---------------------------------------------------------------
+
+    // ===============================================================
     // GET /api/v1/pagos/pedido/{idPedido}
-    // ---------------------------------------------------------------
+    // ===============================================================
 
     /**
-     * Retorna el historial de pagos de un pedido y el saldo pendiente.
-     * Útil para mostrar en la app cuánto se ha abonado y cuánto falta.
+     * Obtiene todos los pagos realizados sobre un pedido.
      *
-     * RESPONSE 200:
-     * {
-     *   "success": true,
-     *   "data": {
-     *     "idPedido":        2,
-     *     "total":           53.00,
-     *     "total_pagado":    20.00,
-     *     "saldo_pendiente": 33.00,
-     *     "estado":          "En Proceso",
-     *     "pagos": [
-     *       { "idPago": 1, "monto": 20.00, "metodo": "Efectivo", "fechaPago": "..." }
-     *     ]
-     *   }
-     * }
+     * También devuelve:
      *
-     * @param int|string|null $idPedido
-     * @return ResponseInterface
+     * - total del pedido
+     * - total pagado
+     * - saldo pendiente
+     * - estado operativo
+     * - estado financiero
      */
-    public function obtenerHistorial($idPedido = null): ResponseInterface
-    {
-        $pedido = $this->pedidoModel->select('idPedido, total, estado')->find((int) $idPedido);
+    public function obtenerHistorial(
+        $idPedido = null
+    ): ResponseInterface {
 
-        if ($pedido === null) {
-            return $this->respondNotFound("Pedido #{$idPedido} no encontrado.");
+        // -----------------------------------------------------------
+        // Validar ID
+        // -----------------------------------------------------------
+
+        if (
+            $idPedido === null
+            ||
+            ! is_numeric(
+                $idPedido
+            )
+        ) {
+            return $this->respondError(
+                'El identificador del pedido es inválido.',
+                ResponseInterface::HTTP_BAD_REQUEST
+            );
         }
 
-        $pagos          = $this->pagoModel->getPagosPorPedido((int) $idPedido);
-        $totalPagado    = $this->pagoModel->getTotalPagado((int) $idPedido);
-        $saldoPendiente = $this->pedidoModel->getSaldoPendiente((int) $idPedido);
+
+        $idPedido =
+            (int) $idPedido;
+
+
+        // -----------------------------------------------------------
+        // Obtener pedido
+        // -----------------------------------------------------------
+
+        $pedido =
+            $this->pedidoModel
+                ->select(
+                    'idPedido, codigoTicket, total, estado'
+                )
+                ->find(
+                    $idPedido
+                );
+
+
+        if ($pedido === null) {
+            return $this->respondNotFound(
+                "Pedido #{$idPedido} no encontrado."
+            );
+        }
+
+
+        // -----------------------------------------------------------
+        // Pagos
+        // -----------------------------------------------------------
+
+        $pagos =
+            $this->pagoModel
+                ->getPagosPorPedido(
+                    $idPedido
+                );
+
+
+        $totalPagado =
+            $this->pagoModel
+                ->getTotalPagado(
+                    $idPedido
+                );
+
+
+        $saldoPendiente =
+            $this->pedidoModel
+                ->getSaldoPendiente(
+                    $idPedido
+                );
+
+
+        // -----------------------------------------------------------
+        // Estado financiero
+        // -----------------------------------------------------------
+
+        $estadoPago =
+            $this->calcularEstadoPago(
+                (float) $pedido['total'],
+                $totalPagado
+            );
+
+
+        // -----------------------------------------------------------
+        // Respuesta
+        // -----------------------------------------------------------
 
         return $this->respondSuccess([
-            'idPedido'        => (int) $pedido['idPedido'],
-            'total'           => (float) $pedido['total'],
-            'total_pagado'    => $totalPagado,
-            'saldo_pendiente' => $saldoPendiente,
-            'estado'          => $pedido['estado'],
-            'pagos'           => $pagos,
+            'idPedido' =>
+                $idPedido,
+
+
+            'codigoTicket' =>
+                $pedido['codigoTicket']
+                ?? null,
+
+
+            'total' =>
+                round(
+                    (float) $pedido['total'],
+                    2
+                ),
+
+
+            'total_pagado' =>
+                round(
+                    $totalPagado,
+                    2
+                ),
+
+
+            'saldo_pendiente' =>
+                round(
+                    $saldoPendiente,
+                    2
+                ),
+
+
+            // Estado físico/operativo
+            'estado' =>
+                $pedido['estado'],
+
+
+            // Estado financiero calculado
+            'estado_pago' =>
+                $estadoPago,
+
+
+            'pagos' =>
+                $pagos,
         ]);
     }
 
-    // ---------------------------------------------------------------
+
+    // ===============================================================
     // GET /api/v1/pagos/{idPago}/recibo
-    // ---------------------------------------------------------------
+    // ===============================================================
 
     /**
-     * Devuelve la estructura del recibo de un pago específico.
-     * Usado para re-imprimir un comprobante de cobro desde la caja.
-     *
-     * RESPONSE 200:
-     * {
-     *   "success": true,
-     *   "data": {
-     *     "empresa": "LAVANDERÍA MARYCLEAN",
-     *     "recibo_n": "00000005",
-     *     "fecha_pago": "01/09/2026 14:30:00",
-     *     "ticket": "MC-20260901-A3F7B",
-     *     "cliente": "JUAN PABLO MENDOZA GARCÍA",
-     *     "documento": "12345678",
-     *     "monto_abonado": "33.00",
-     *     "metodo": "Efectivo",
-     *     "total_pedido": "53.00",
-     *     "estado_pedido": "Pagado"
-     *   }
-     * }
-     *
-     * @param int|string|null $idPago
-     * @return ResponseInterface
+     * Obtiene el recibo correspondiente a un pago concreto.
      */
-    public function obtenerRecibo($idPago = null): ResponseInterface
-    {
-        // Solo cajero y admin pueden acceder a recibos
-        if (! $this->tieneRol('cajero', 'admin')) {
-            return $this->respondError('No tiene permisos para ver recibos.', ResponseInterface::HTTP_FORBIDDEN);
+    public function obtenerRecibo(
+        $idPago = null
+    ): ResponseInterface {
+
+        // -----------------------------------------------------------
+        // Seguridad
+        // -----------------------------------------------------------
+
+        if (! $this->tieneRol(
+            'cajero',
+            'admin'
+        )) {
+            return $this->respondError(
+                'No tiene permisos para ver recibos.',
+                ResponseInterface::HTTP_FORBIDDEN
+            );
         }
 
-        $recibo = $this->pagoModel->getDatosRecibo((int) $idPago);
+
+        // -----------------------------------------------------------
+        // Validar ID
+        // -----------------------------------------------------------
+
+        if (
+            $idPago === null
+            ||
+            ! is_numeric(
+                $idPago
+            )
+        ) {
+            return $this->respondError(
+                'El identificador del pago es inválido.',
+                ResponseInterface::HTTP_BAD_REQUEST
+            );
+        }
+
+
+        // -----------------------------------------------------------
+        // Obtener recibo
+        // -----------------------------------------------------------
+
+        $recibo =
+            $this->pagoModel
+                ->getDatosRecibo(
+                    (int) $idPago
+                );
+
 
         if ($recibo === null) {
-            return $this->respondNotFound("Recibo del pago #{$idPago} no encontrado.");
+            return $this->respondNotFound(
+                "Recibo del pago #{$idPago} no encontrado."
+            );
         }
 
-        return $this->respondSuccess($recibo, 'Recibo de pago obtenido.');
+
+        return $this->respondSuccess(
+            $recibo,
+            'Recibo de pago obtenido correctamente.'
+        );
+    }
+
+
+    // ===============================================================
+    // UTILIDADES
+    // ===============================================================
+
+    /**
+     * Calcula el estado financiero del pedido.
+     *
+     * Esto permite diferenciar:
+     *
+     * Estado operativo:
+     * Recibido / En Proceso / Listo / Entregado
+     *
+     * Estado financiero:
+     * Pendiente / Parcial / Pagado
+     */
+    private function calcularEstadoPago(
+        float $total,
+        float $totalPagado
+    ): string {
+
+        $total =
+            round(
+                $total,
+                2
+            );
+
+        $totalPagado =
+            round(
+                $totalPagado,
+                2
+            );
+
+
+        if ($totalPagado <= 0) {
+            return 'Pendiente';
+        }
+
+
+        if ($totalPagado >= $total) {
+            return 'Pagado';
+        }
+
+
+        return 'Parcial';
     }
 }
