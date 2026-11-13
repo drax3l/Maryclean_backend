@@ -88,7 +88,7 @@ class PagoModelTest extends CIUnitTestCase
         $resultado = $this->pagoModel->registrarPago(2, 50.00, 'Efectivo');
 
         $this->assertFalse($resultado['success'], 'El trigger debe bloquear el sobrepago.');
-        $this->assertSame('SOBREPAGO_TRIGGER_45000', $resultado['codigo_error']);
+        $this->assertSame('SOBREPAGO', $resultado['codigo_error']);
         $this->assertStringContainsString('S/', $resultado['mensaje'], 'El mensaje debe indicar el saldo en S/.');
     }
 
@@ -103,7 +103,7 @@ class PagoModelTest extends CIUnitTestCase
         $resultado = $this->pagoModel->registrarPago(2, $saldo + 0.01, 'Efectivo');
 
         $this->assertFalse($resultado['success']);
-        $this->assertSame('SOBREPAGO_TRIGGER_45000', $resultado['codigo_error']);
+        $this->assertSame('SOBREPAGO', $resultado['codigo_error']);
     }
 
     /**
@@ -164,7 +164,7 @@ class PagoModelTest extends CIUnitTestCase
         $resultado = $this->pagoModel->registrarPago(1, 0.00, 'Efectivo');
 
         $this->assertFalse($resultado['success']);
-        $this->assertSame('VALIDATION_ERROR', $resultado['codigo_error']);
+        $this->assertSame('MONTO_INVALIDO', $resultado['codigo_error']);
     }
 
     /**
@@ -176,7 +176,7 @@ class PagoModelTest extends CIUnitTestCase
         $resultado = $this->pagoModel->registrarPago(1, 5.00, 'PayPal');
 
         $this->assertFalse($resultado['success']);
-        $this->assertSame('VALIDATION_ERROR', $resultado['codigo_error']);
+        $this->assertSame('METODO_INVALIDO', $resultado['codigo_error']);
     }
 
     // ---------------------------------------------------------------
