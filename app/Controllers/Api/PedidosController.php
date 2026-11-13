@@ -556,6 +556,92 @@ class PedidosController extends BaseApiController
             if (
                 $pagoInicial !== null
             ) {
+                // ---------------------------------------------------
+                // SC-01: Validar porcentaje mínimo del pago inicial
+                // ---------------------------------------------------
+
+                $configPedidos = config('Pedidos');
+
+                $porcentajeMinimo = (float) env(
+                    'pedidos.porcentajePagoInicialMinimo',
+                    $configPedidos->porcentajePagoInicialMinimo
+                );
+
+                // Mantener la configuración dentro de un rango válido.
+                $porcentajeMinimo = max(
+                    0.0,
+                    min(100.0, $porcentajeMinimo)
+                );
+
+                // En este punto los triggers ya calcularon Pedido.total.
+                $pedidoActual =
+                    $this->pedidoModel
+                        ->find(
+                            $idPedido
+                        );
+
+                $totalPedido = round(
+                    (float) (
+                        $pedidoActual['total']
+                        ?? 0
+                    ),
+                    2
+                );
+
+                $montoMinimo = round(
+                    $totalPedido
+                    * ($porcentajeMinimo / 100),
+                    2
+                );
+
+                if (
+                    $porcentajeMinimo > 0
+                    && $pagoInicial['monto'] < $montoMinimo
+                ) {
+                    /*
+                     * El pedido ya fue creado para poder calcular
+                     * su total. Si el adelanto no cumple la política,
+                     * se elimina el pedido para mantener la operación
+                     * atómica. Sus DetallePedido se eliminan mediante
+                     * ON DELETE CASCADE.
+                     */
+                    $this->pedidoModel
+                        ->delete(
+                            $idPedido
+                        );
+
+                    return $this->response
+                        ->setStatusCode(
+                            ResponseInterface::HTTP_UNPROCESSABLE_ENTITY
+                        )
+                        ->setJSON([
+                            'success' =>
+                                false,
+
+                            'status' =>
+                                ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+
+                            'message' =>
+                                'No se pudo registrar el pedido porque el pago inicial no alcanza el mínimo requerido.',
+
+                            'data' =>
+                                null,
+
+                            'errors' => [
+                                'pagoInicial' =>
+                                    sprintf(
+                                        'El pago inicial debe cubrir como mínimo el %.2f%% del total del pedido. Monto mínimo: S/ %.2f.',
+                                        $porcentajeMinimo,
+                                        $montoMinimo
+                                    ),
+
+                                'codigo_error' =>
+                                    'PAGO_INICIAL_INSUFICIENTE',
+                            ],
+                        ]);
+                }
+
+
                 $resultadoPago =
                     $this->pagoModel
                         ->registrarPago(
