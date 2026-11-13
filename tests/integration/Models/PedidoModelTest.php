@@ -22,7 +22,8 @@ use CodeIgniter\Database\Exceptions\DatabaseException;
  * - Generación del ticket imprimible
  * - Cálculo de saldo pendiente
  *
- * ENTORNO: lavanderia_test (configurado en phpunit.xml)
+ * ENTORNO: lavanderia_test
+ *
  * PREREQUISITO: Correr LavanderiaSeeder antes de la suite
  *
  * @package Tests\App\Models
@@ -62,9 +63,11 @@ class PedidoModelTest extends CIUnitTestCase
     public function testCambiarEstadoExitoso(): void
     {
         $resultado = $this->pedidoModel->cambiarEstado(1, 'En Proceso');
+
         $this->assertTrue($resultado);
 
         $pedido = $this->pedidoModel->find(1);
+
         $this->assertSame('En Proceso', $pedido['estado']);
     }
 
@@ -82,17 +85,49 @@ class PedidoModelTest extends CIUnitTestCase
 
     /**
      * @test
-     * Verifica que al cambiar a 'Entregado', el trigger asigna fechaEntrega automáticamente.
+     * Verifica que un pedido pagado puede cambiar a 'Entregado'
+     * y que el trigger asigna fechaEntrega automáticamente.
      */
     public function testCambiarAEntregadoAsignaFechaEntrega(): void
     {
-        // El pedido 3 está en estado 'Listo' (ver PedidoSeeder)
-        $this->pedidoModel->cambiarEstado(3, 'Entregado');
+        // Pedido 3 está en estado 'Listo' y tiene un saldo pendiente de S/ 25.00.
+        // Primero debe quedar completamente pagado antes de poder entregarse.
+        $pagoModel = new PagoModel();
+
+        $resultadoPago = $pagoModel->registrarPago(
+            3,
+            25.00,
+            'Efectivo'
+        );
+
+        $this->assertTrue(
+            $resultadoPago['success'],
+            'El pedido debe poder pagarse completamente antes de la entrega.'
+        );
+
+        // Una vez pagado, el pedido puede pasar a Entregado.
+        $resultado = $this->pedidoModel->cambiarEstado(3, 'Entregado');
+
+        $this->assertTrue(
+            $resultado,
+            'El pedido pagado debe poder cambiar al estado Entregado.'
+        );
 
         $pedido = $this->pedidoModel->find(3);
-        $this->assertSame('Entregado', $pedido['estado']);
-        $this->assertNotNull($pedido['fechaEntrega'], 'El trigger debió asignar fechaEntrega automáticamente.');
-        $this->assertNotEmpty($pedido['fechaEntrega']);
+
+        $this->assertSame(
+            'Entregado',
+            $pedido['estado']
+        );
+
+        $this->assertNotNull(
+            $pedido['fechaEntrega'],
+            'El trigger debe asignar fechaEntrega automáticamente.'
+        );
+
+        $this->assertNotEmpty(
+            $pedido['fechaEntrega']
+        );
     }
 
     /**
@@ -109,9 +144,15 @@ class PedidoModelTest extends CIUnitTestCase
         $this->pedidoModel->cambiarEstado(1, 'En Proceso');
 
         $despues = $auditoriaModel->contarCambiosPorPedido(1);
-        $this->assertSame($antes + 1, $despues, 'El trigger de auditoría debió registrar exactamente 1 cambio de estado.');
+
+        $this->assertSame(
+            $antes + 1,
+            $despues,
+            'El trigger de auditoría debió registrar exactamente 1 cambio de estado.'
+        );
 
         $ultimo = $auditoriaModel->getUltimoEstado(1);
+
         $this->assertSame('Recibido', $ultimo['estadoAnterior']);
         $this->assertSame('En Proceso', $ultimo['estadoNuevo']);
     }
@@ -123,7 +164,9 @@ class PedidoModelTest extends CIUnitTestCase
     public function testCancelarPedido(): void
     {
         $this->pedidoModel->cancelarPedido(1);
+
         $pedido = $this->pedidoModel->find(1);
+
         $this->assertSame('Cancelado', $pedido['estado']);
     }
 
@@ -141,8 +184,17 @@ class PedidoModelTest extends CIUnitTestCase
 
         $estados = array_column($activos, 'estado');
 
-        $this->assertNotContains('Entregado', $estados, 'La vista no debe incluir pedidos Entregados.');
-        $this->assertNotContains('Cancelado', $estados, 'La vista no debe incluir pedidos Cancelados.');
+        $this->assertNotContains(
+            'Entregado',
+            $estados,
+            'La vista no debe incluir pedidos Entregados.'
+        );
+
+        $this->assertNotContains(
+            'Cancelado',
+            $estados,
+            'La vista no debe incluir pedidos Cancelados.'
+        );
     }
 
     /**
@@ -154,7 +206,9 @@ class PedidoModelTest extends CIUnitTestCase
         $activos = $this->pedidoModel->getPedidosActivos();
 
         $this->assertNotEmpty($activos);
+
         $primer = $activos[0];
+
         $this->assertArrayHasKey('cliente', $primer);
         $this->assertArrayHasKey('empleado', $primer);
         $this->assertArrayHasKey('codigoTicket', $primer);
@@ -171,21 +225,35 @@ class PedidoModelTest extends CIUnitTestCase
      */
     public function testGetSaldoPendiente(): void
     {
-        // Pedido 2: total = 35.00 + 18.00 = 53.00. Pago registrado: 20.00
+        // Pedido 2: total = 35.00 + 18.00 = 53.00.
+        // Pago registrado: 20.00.
         $saldo = $this->pedidoModel->getSaldoPendiente(2);
-        $this->assertEqualsWithDelta(33.00, $saldo, 0.01, 'Saldo pendiente incorrecto para pedido 2.');
+
+        $this->assertEqualsWithDelta(
+            33.00,
+            $saldo,
+            0.01,
+            'Saldo pendiente incorrecto para pedido 2.'
+        );
     }
 
     /**
      * @test
-     * Verifica que getSaldoPendiente() devuelve 0 para pedidos sin detalles.
+     * Verifica que getSaldoPendiente() devuelve correctamente
+     * el saldo de un pedido sin pagos.
      */
     public function testSaldoPendientePedidoSinTotal(): void
     {
-        // Pedido 1 no tiene pagos; saldo = total del pedido
+        // Pedido 1 no tiene pagos; saldo = total del pedido.
         $total = (float) ($this->pedidoModel->find(1)['total'] ?? 0);
+
         $saldo = $this->pedidoModel->getSaldoPendiente(1);
-        $this->assertEqualsWithDelta($total, $saldo, 0.01);
+
+        $this->assertEqualsWithDelta(
+            $total,
+            $saldo,
+            0.01
+        );
     }
 
     // ---------------------------------------------------------------
@@ -208,7 +276,10 @@ class PedidoModelTest extends CIUnitTestCase
         $this->assertArrayHasKey('saldo_pendiente', $ticket);
         $this->assertArrayHasKey('estado', $ticket);
 
-        $this->assertSame('LAVANDERÍA MARYCLEAN', $ticket['encabezado']['empresa']);
+        $this->assertSame(
+            'LAVANDERÍA MARYCLEAN',
+            $ticket['encabezado']['empresa']
+        );
     }
 
     /**
@@ -249,12 +320,19 @@ class PedidoModelTest extends CIUnitTestCase
     public function testGenerarCodigoTicketEsUnico(): void
     {
         $codigos = [];
+
         for ($i = 0; $i < 5; $i++) {
             $codigos[] = $this->pedidoModel->generarCodigoTicket();
-            usleep(1000); // Pequeña pausa para variar uniqid
+
+            // Pequeña pausa para variar uniqid.
+            usleep(1000);
         }
 
-        $this->assertSame(count($codigos), count(array_unique($codigos)), 'Los códigos generados deben ser únicos.');
+        $this->assertSame(
+            count($codigos),
+            count(array_unique($codigos)),
+            'Los códigos generados deben ser únicos.'
+        );
     }
 
     // ---------------------------------------------------------------
@@ -267,8 +345,9 @@ class PedidoModelTest extends CIUnitTestCase
      */
     public function testRegistrarRecepcionDevuelveIdValido(): void
     {
-        $codigo     = 'MC-TEST-SP001';
-        $idPedido   = $this->pedidoModel->registrarRecepcion(
+        $codigo = 'MC-TEST-SP001';
+
+        $idPedido = $this->pedidoModel->registrarRecepcion(
             $codigo,
             date('Y-m-d H:i:s'),
             1,
@@ -279,6 +358,7 @@ class PedidoModelTest extends CIUnitTestCase
         $this->assertGreaterThan(0, $idPedido);
 
         $pedido = $this->pedidoModel->find($idPedido);
+
         $this->assertSame($codigo, $pedido['codigoTicket']);
         $this->assertSame('Recibido', $pedido['estado']);
     }
