@@ -1,0 +1,22 @@
+﻿vendor\bin\phpstan :  0/3 [>---------------------------]   0%[1G[2K 3/3 [============================] 100%
+En línea: 16 Carácter: 1
++ vendor\bin\phpstan analyse app\Controllers\Api\PedidosController.php  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( 0/3 [>--------...=========] 100%:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+ ------ ---------------------------------------------------------------------- 
+  Line   Controllers\Api\PedidosController.php                                 
+ ------ ---------------------------------------------------------------------- 
+  :563   Function config not found.                                            
+         ­ƒ¬¬  function.notFound                                                 
+         ­ƒÆí  Learn more at https://phpstan.org/user-guide/discovering-symbols  
+  :565   Function env not found.                                               
+         ­ƒ¬¬  function.notFound                                                 
+         ­ƒÆí  Learn more at https://phpstan.org/user-guide/discovering-symbols  
+ ------ ---------------------------------------------------------------------- 
+
+
+ [ERROR] Found 2 errors                                                                                                 
+
