@@ -1,0 +1,83 @@
+PS C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba> # 1. Corregir el namespace real de CodeIgniter 4 (Config\Pedidos) en PedidoProcesadorService.php
+>> $rutaServicio = "$PWD\app\Services\PedidoProcesadorService.php"
+>> $contenido = [System.IO.File]::ReadAllText($rutaServicio)
+>> $contenido = $contenido.Replace("use App\Config\Pedidos as PedidosConfig;", "use Config\Pedidos as PedidosConfig;")
+>> [System.IO.File]::WriteAllText($rutaServicio, $contenido, (New-Object System.Text.UTF8Encoding $false))
+>> 
+>> # 2. Verificar sintaxis y registrar commit pequeño de corrección estática (Actividad 7)
+>> php -l app\Services\PedidoProcesadorService.php
+>> git diff --check
+>> git add app\Services\PedidoProcesadorService.php
+>> git commit -m "fix(static): corregir namespace Config\Pedidos en PedidoProcesadorService"
+>> 
+>> # 3. Ejecutar análisis estático FINAL con exactamente las mismas rutas, nivel y reglas
+>> vendor\bin\phpstan analyse app\Controllers\Api\PedidosController.php app\Services --level=1 2>&1 | Out-File -FilePath docs\calidad\phpstan-despues.txt -Encoding utf8
+>> vendor\bin\phpmd app\Controllers\Api\PedidosController.php,app\Services text codesize,design,unusedcode 2>&1 | Out-File -FilePath docs\calidad\phpmd-despues.txt -Encoding utf8
+>> 
+>> # 4. Mostrar salidas finales y bitácora completa de commits
+>> Write-Host "`n=== PHPSTAN DESPUES (FINAL) ===" -ForegroundColor Cyan
+>> Get-Content docs\calidad\phpstan-despues.txt
+>> Write-Host "`n=== PHPMD DESPUES (FINAL) ===" -ForegroundColor Cyan
+>> Get-Content docs\calidad\phpmd-despues.txt
+>> Write-Host "`n=== BITACORA GIT COMPLETA ===" -ForegroundColor Green
+>> git log --oneline -n 7
+No syntax errors detected in app\Services\PedidoProcesadorService.php
+[refactor/pedidos-calidad 64aa362] fix(static): corregir namespace Config\Pedidos en PedidoProcesadorService
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+=== PHPSTAN DESPUES (FINAL) ===
+ 3/3 [============================] 100%
+En línea: 14 Carácter: 1
++ vendor\bin\phpstan analyse app\Controllers\Api\PedidosController.php  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( 0/3 [>--------...=========] 100%:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+
+ [OK] No errors                                                                                                         
+
+
+=== PHPMD DESPUES (FINAL) ===
+vendor\bin\phpmd : Deprecated: positional arguments are deprecated, use "phpmd analyze <file> --format text --ruleset 
+<ruleset>" instead.
+En línea: 15 Carácter: 1
++ vendor\bin\phpmd app\Controllers\Api\PedidosController.php,app\Servic ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Deprecated: pos...eset>" instead.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+=== BITACORA GIT COMPLETA ===
+64aa362 (HEAD -> refactor/pedidos-calidad) fix(static): corregir namespace Config\Pedidos en PedidoProcesadorService
+89d1b9c refactor(R2): simplificar cambiarEstado y extraer validacion de ID en PedidosController
+b92c3c7 refactor(R1): extraer validacion y orquestacion de recepcion a servicios
+ad4cd87 docs: registrar linea base inicial de phpstan y phpmd
+2537800 chore: agregar phpstan y phpmd para analisis estatico
+afd615a (origin/change/SC-01, change/SC-01) change: configurar porcentaje minimo de pago inicial SC-01
+1ee80a0 (origin/fix/INC-01, fix/INC-01) docs: agregar evidencias E1 E2 E3 de INC-01
+PS C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba> 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

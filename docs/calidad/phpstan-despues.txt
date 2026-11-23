@@ -1,0 +1,11 @@
+﻿vendor\bin\phpstan :  0/3 [>---------------------------]   0%[1G[2K 3/3 [============================] 100%
+En línea: 14 Carácter: 1
++ vendor\bin\phpstan analyse app\Controllers\Api\PedidosController.php  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( 0/3 [>--------...=========] 100%:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+
+ [OK] No errors                                                                                                         
+

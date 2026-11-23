@@ -1,0 +1,53 @@
+PS C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba> Write-Host "=== VERSIONES ENTORNO Y ANALIZADORES ===" -ForegroundColor Yellow
+>> php -v | Select-Object -First 1
+>> composer show codeigniter4/framework phpstan/phpstan phpmd/phpmd | Select-String -Pattern "^(name|versions)\s*:"
+>> Write-Host "`n=== PHPSTAN DESPUES (64aa362) ===" -ForegroundColor Green
+>> Get-Content docs\calidad\phpstan-despues.txt
+>> Write-Host "`n=== PHPMD DESPUES (64aa362) ===" -ForegroundColor Green
+>> Get-Content docs\calidad\phpmd-despues.txt
+=== VERSIONES ENTORNO Y ANALIZADORES ===
+PHP 8.2.12 (cli) (built: Oct 24 2023 21:15:15) (ZTS Visual C++ 2019 x64)
+
+                                                                                 
+  Too many arguments to "show" command, expected arguments "package" "version".  
+                                                                                 
+
+show [--all] [--locked] [-i|--installed] [-p|--platform] [-a|--available] [-s|--self] [-N|--name-only] [-P|--path] [-t|--tree] [-l|--latest] [-o|--outdated] [--ignore IGNORE] [-M|--major-only] [-m|--minor-only] [--patch-only] [-A|--sort-by-age] [-D|--direct] [--strict] [-f|--format FORMAT] [--no-dev] [--ignore-platform-req IGNORE-PLATFORM-REQ] [--ignore-platform-reqs] [--] [<package> [<version>]]
+
+
+=== PHPSTAN DESPUES (64aa362) ===
+ 3/3 [============================] 100%
+En línea: 14 Carácter: 1
++ vendor\bin\phpstan analyse app\Controllers\Api\PedidosController.php  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( 0/3 [>--------...=========] 100%:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+
+ [OK] No errors                                                                                                         
+
+
+=== PHPMD DESPUES (64aa362) ===
+vendor\bin\phpmd : Deprecated: positional arguments are deprecated, use "phpmd analyze <file> --format text --ruleset 
+<ruleset>" instead.
+En línea: 15 Carácter: 1
++ vendor\bin\phpmd app\Controllers\Api\PedidosController.php,app\Servic ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Deprecated: pos...eset>" instead.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+PS C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba> 
+
+
+
+
+
+
+
+
+
+
+
+
+

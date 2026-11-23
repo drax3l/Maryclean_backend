@@ -1,0 +1,13 @@
+﻿vendor\bin\phpmd : Deprecated: positional arguments are deprecated, use "phpmd analyze <file> --format text --ruleset <ruleset>" instead.
+En línea: 17 Carácter: 1
++ vendor\bin\phpmd app\Controllers\Api\PedidosController.php,app\Servic ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Deprecated: pos...eset>" instead.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba\app\Controllers\Api\PedidosController.php:36   ExcessiveClassComplexity  The class PedidosController has an overall complexity of 54 which is very high. The configured complexity threshold is 50.
+C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba\app\Controllers\Api\PedidosController.php:194  CyclomaticComplexity      The method crearRecepcion() has a Cyclomatic Complexity of 28. The configured cyclomatic complexity threshold is 10.
+C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba\app\Controllers\Api\PedidosController.php:194  NPathComplexity           The method crearRecepcion() has an NPath complexity of 456144. The configured NPath complexity threshold is 200.
+C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba\app\Controllers\Api\PedidosController.php:194  ExcessiveMethodLength     The method crearRecepcion() has 579 lines of code. Current threshold is set to 100. Avoid really long methods.
+C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba\app\Controllers\Api\PedidosController.php:839  NPathComplexity           The method cambiarEstado() has an NPath complexity of 216. The configured NPath complexity threshold is 200.
+C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba\app\Controllers\Api\PedidosController.php:839  ExcessiveMethodLength     The method cambiarEstado() has 119 lines of code. Current threshold is set to 100. Avoid really long methods.

@@ -1,0 +1,117 @@
+# Informe de Calidad Interna, Refactorización y Análisis Estático — MaryClean (Guía Integrada N.º 12)
+
+---
+
+## F22. Identificación y Alcance
+
+| Campo | Valor del equipo |
+| :--- | :--- |
+| **Proyecto, equipo y versión** | **MaryClean** (Sistema de Gestión de Lavandería — Backend REST API en CodeIgniter `v4.7.4` / PHP `8.2.12` + Frontend React/TypeScript) |
+| **Módulo elegido y razón** | **Gestión y Recepción de Pedidos** (`PedidosController`, `PedidoValidatorService`, `PedidoProcesadorService`). Es el núcleo transaccional del sistema y concentraba deuda técnica acumulada tras integrar el rollback atómico ante sobrepago (`INC-01`) y la política configurable del 20% de pago inicial mínimo (`SC-01`). |
+| **Requisito(s)/historia(s) asociados** | Registro de recepción de pedidos con adelanto opcional (`POST /api/v1/pedidos`), actualización de estado operativo (`PATCH /api/v1/pedidos/{id}/estado`), corrección `INC-01` (atomicidad de pedido/pago) y solicitud de cambio `SC-01` (`$porcentajePagoInicialMinimo = 20.0`). |
+| **Flujo observable y URL / operación** | `POST /api/v1/pedidos` (`crearRecepcion`), `PATCH /api/v1/pedidos/{id}/estado` (`cambiarEstado`), `GET /api/v1/pedidos/{id}` (`show`), `GET /api/v1/pedidos/{id}/ticket` (`obtenerTicket`). |
+| **Clases/rutas de código examinadas** | `app/Controllers/Api/PedidosController.php`, `app/Services/PedidoValidatorService.php`, `app/Services/PedidoProcesadorService.php`, `app/Config/Pedidos.php`, `tests/unit/RegistroPedido*.php`, `tests/integration/Inc01PagoInicialRollbackTest.php`, `tests/integration/Sc01PagoInicialMinimoTest.php`. |
+| **Commit inicial (hash), rama y fecha** | Commit inicial: `afd615a` (`change: configurar porcentaje minimo de pago inicial SC-01`) — Rama de trabajo: `refactor/pedidos-calidad` — Fecha: Noviembre 2026. |
+
+---
+
+## F23. Inventario y Priorización de Deuda Técnica
+
+| ID | Archivo:Método | Smell / Riesgo | Evidencia y efecto sobre mantenimiento | Prioridad |
+| :--- | :--- | :--- | :--- | :---: |
+| **DT-01** | `app/Controllers/Api/PedidosController.php:crearRecepcion()` (líneas 194–772 en `afd615a`) | **Método extenso / Múltiples responsabilidades (*God Controller*)** | PHPMD reporta `579 líneas` (umbral `100`), complejidad ciclomática `28` (umbral `10`) y `NPathComplexity = 456144` (umbral `200`), elevando la complejidad global de la clase `PedidosController` a `54` (umbral `50`). Mezcla seguridad de roles, validación de prendas y pago inicial, cálculo de política `SC-01`, persistencia, rollback manual `INC-01` y mapeo HTTP, encareciendo cada cambio de regla de negocio. | **Alta** |
+| **DT-02** | `app/Controllers/Api/PedidosController.php:crearRecepcion()` (líneas 293–337) vs `app/Services/PedidoValidatorService.php:esDetalleValido()` (líneas 21–32) | **Duplicación de reglas de validación y servicios subutilizados** | `PedidoValidatorService::esDetalleValido()` ya definía la regla de validación de `idPrenda` y `cantidad > 0`, pero `crearRecepcion()` reimplementaba las mismas condiciones en un bucle `foreach` dentro del controlador. Si cambia una restricción de prendas, existe riesgo de inconsistencia entre el servicio y el endpoint. | **Alta** |
+| **DT-03** | `app/Controllers/Api/PedidosController.php:cambiarEstado()` (líneas 839–957 en `afd615a`), `show()` y `obtenerTicket()` | **Método extenso, complejidad NPath elevada y validación repetida de identificador** | PHPMD reporta `NPathComplexity = 216` (umbral `200`) y `119 líneas` (umbral `100`) en `cambiarEstado()`, además de comprobaciones redundantes (`is_array($body)` tras `getJsonBody()`) y repetición de la validación `is_numeric($id)` en `show()`, `obtenerTicket()` y `cambiarEstado()`. | **Media** |
+
+---
+
+## F24. Plan de Refactorización
+
+| Campo | Refactorización R1 (Estructural) | Refactorización R2 (Localizada) |
+| :--- | :--- | :--- |
+| **Hallazgo que resuelve** | `DT-01` y `DT-02` | `DT-03` |
+| **Tipo de técnica** | *Extract Class / Move Method* (traslado de validación de detalles/pago a `PedidoValidatorService` y orquestación transaccional `INC-01`/`SC-01` a `PedidoProcesadorService`). | *Extract Method* (`extraerIdNumerico()`) y *Replace Conditional with Guard Clauses* (cláusulas de guarda planas en `cambiarEstado()`). |
+| **Archivo y método antes** | `app/Controllers/Api/PedidosController.php::crearRecepcion()` (579 líneas, CC 28, NPath 456144), `PedidoValidatorService.php` (31 líneas) y `PedidoProcesadorService.php` (23 líneas). | `app/Controllers/Api/PedidosController.php::cambiarEstado()` (119 líneas, NPath 216), `show()` y `obtenerTicket()`. |
+| **Estructura deseada** | `PedidosController::crearRecepcion()` conserva únicamente autorización, validación estructural inicial y construcción de respuesta HTTP; delega validación de prendas y pago inicial a `PedidoValidatorService` y delega persistencia, política `SC-01` (vía `Factories::config('Pedidos')`) y rollback `INC-01` a `PedidoProcesadorService::registrarPedidoCompleto()`. | `PedidosController` centraliza la validación de ID numérico de ruta en `extraerIdNumerico(mixed $id): ?int` y reestructura `cambiarEstado()` mediante cláusulas de guarda secuenciales sin condiciones redundantes. |
+| **Comportamiento que NO cambia** | Códigos HTTP (`201`, `400`, `401`, `403`, `422`, `500`), formato JSON `{success, status, message, data, errors}`, mensajes y códigos de error (`PAGO_INICIAL_INSUFICIENTE`, `SOBREPAGO`, etc.), rollback atómico en BD (`ON DELETE CASCADE`) y firmas públicas previas de los servicios (`validarRegistroBasico`, `esDetalleValido`, `procesarRegistro`). | Respuestas HTTP `400`, `403`, `404`, `422` y `200`, formato JSON de salida y transición de estados en `PedidoModel::cambiarEstado()`. |
+| **Pruebas que lo protegen** | Suite completa PHPUnit (`55 tests, 124 assertions`), `RegistroPedidoRuleTest`, `RegistroPedidoExceptionTest`, `RegistroPedidoMockTest`, `Inc01PagoInicialRollbackTest` y `Sc01PagoInicialMinimoTest`. | Suite focalizada PHPUnit (`13 tests, 25 assertions` en `phpunit-R2.txt` y `phpunit-final.txt`) y suite completa (`55 tests, 124 assertions`). |
+| **Riesgo o efecto colateral** | Si `PedidoProcesadorService` instanciara `new Config\Pedidos()` en lugar de `Factories::config('Pedidos')`, ignoraría los cambios dinámicos de `config('Pedidos')->porcentajePagoInicialMinimo = 0.0` realizados por `Sc01PagoInicialMinimoTest`. Mitigado usando el singleton compartido `Factories::config('Pedidos')` y corrigiendo el namespace `Config\Pedidos`. | Validar el permiso de rol `admin` para `'Cancelado'` antes de consultar `find($idPedido)` rechaza con `403 Forbidden` sin consulta extra a BD; para usuarios autorizados el resultado es idéntico. |
+| **Commit asociado** | `b92c3c7` (complementado por ajuste de namespace estático `64aa362`). | `89d1b9c`. |
+
+---
+
+## F25. Matriz de Comportamiento y Regresión
+
+Todas las pruebas de integración se ejecutaron sobre la base aislada **`defaultdb_test`** (sin tocar `defaultdb` de producción).
+
+| CP | Datos / Precondición | Resultado esperado | Antes (`afd615a`) | Después (`b92c3c7` / `89d1b9c` / `64aa362`) |
+| :--- | :--- | :--- | :--- | :--- |
+| **CP-01** | `POST /api/v1/pedidos` con cliente `1`, prenda `1` (cantidad `1`, total `S/ 5.00`), política `SC-01 = 20.0%`, **sin `pagoInicial`**. | HTTP `201 Created`; pedido y detalle registrados sin fila en tabla `Pago`. | **PASS** — `Sc01PagoInicialMinimoTest::testPoliticaVeintePermitePedidoSinPagoInicial` (T-02, suite `55 tests, 124 assertions`). | **PASS** — `Sc01PagoInicialMinimoTest::testPoliticaVeintePermitePedidoSinPagoInicial` (`13 tests, 25 assertions` en `phpunit-final.txt`). |
+| **CP-02** | `POST /api/v1/pedidos` con total `S/ 5.00`, política `SC-01 = 20.0%` (mínimo `S/ 1.00`) y `pagoInicial.monto = 1.00` (**exactamente 20%**). | HTTP `201 Created`; pedido y pago inicial registrados correctamente. | **PASS** — `Sc01PagoInicialMinimoTest::testPoliticaVeinteAceptaMontoExacto` (T-04). | **PASS** — `Sc01PagoInicialMinimoTest::testPoliticaVeinteAceptaMontoExacto` (`phpunit-final.txt`). |
+| **CP-03** | `POST /api/v1/pedidos` con total `S/ 5.00`, política `SC-01 = 20.0%` (mínimo `S/ 1.00`) y `pagoInicial.monto = 0.99` (**inferior al 20%**). | HTTP `422 Unprocessable Entity`, `errors.codigo_error = 'PAGO_INICIAL_INSUFICIENTE'` y rollback atómico del pedido. | **PASS** — `Sc01PagoInicialMinimoTest::testPoliticaVeinteRechazaMontoMenorAlMinimo` (T-03). | **PASS** — `Sc01PagoInicialMinimoTest::testPoliticaVeinteRechazaMontoMenorAlMinimo` (`phpunit-final.txt`). |
+| **CP-04** | `POST /api/v1/pedidos` con total `S/ 5.00` y `pagoInicial.monto = 20.00` (**sobrepago > total**, `INC-01`). | HTTP `422 Unprocessable Entity` (`SOBREPAGO` / `SOBREPAGO_TRIGGER_45000`), `success = false` y conteo de filas en tabla `Pedido` invariable. | **PASS** — `Inc01PagoInicialRollbackTest::testPagoInicialMayorAlTotalDebeRechazarPedido` y `testPagoInicialMayorAlTotalNoDebePersistirPedido`. | **PASS** — `Inc01PagoInicialRollbackTest` (ambos métodos verificados en `phpunit-final.txt`). |
+| **CP-05** | `POST /api/v1/pedidos` con política `SC-01 = 0.0%` y `pagoInicial.monto = 0.50`. | HTTP `201 Created`; compatibilidad retroactiva cuando el mínimo está desactivado. | **PASS** — `Sc01PagoInicialMinimoTest::testPoliticaCeroPermitePagoInicialPequeno` (T-01). | **PASS** — `Sc01PagoInicialMinimoTest::testPoliticaCeroPermitePagoInicialPequeno` (`phpunit-final.txt`). |
+| **CP-06** | Validación unitaria de prendas (`cantidad = 2` vs `cantidad = -5`), cliente faltante y mock de `PedidoModel`. | `esDetalleValido()` retorna `true`/`false`; `validarRegistroBasico()` lanza `\InvalidArgumentException`; `procesarRegistro()` retorna `99` sin BD. | **PASS** — `RegistroPedidoRuleTest`, `RegistroPedidoExceptionTest`, `RegistroPedidoMockTest`. | **PASS** — `RegistroPedidoRuleTest`, `RegistroPedidoExceptionTest`, `RegistroPedidoMockTest` (`phpunit-final.txt`). |
+
+---
+
+## F26. Protocolo de Análisis Estático y Comparación
+
+| Elemento | Registro obligatorio |
+| :--- | :--- |
+| **PHP y CodeIgniter (versiones)** | PHP `8.2.12` (cli) — `codeigniter4/framework` `v4.7.4` — `phpunit/phpunit` `10.5.66` |
+| **PHPStan / PHPMD (versiones)** | `phpstan/phpstan` `2.3.7` — `phpmd/phpmd` `3.0.0` |
+| **Rutas analizadas (idénticas)** | PHPStan: `app\Controllers\Api\PedidosController.php app\Services`<br>PHPMD: `app\Controllers\Api\PedidosController.php,app\Services` |
+| **Nivel PHPStan y reglas PHPMD** | PHPStan `--level=1` — PHPMD rulesets: `codesize,design,unusedcode` |
+| **Comandos exactos** | **Inicial (`ad4cd87`):**<br>`vendor\bin\phpstan analyse app\Controllers\Api\PedidosController.php app\Services --level=1 2>&1 \| Out-File -FilePath docs\calidad\phpstan-antes.txt -Encoding utf8`<br>`vendor\bin\phpmd app\Controllers\Api\PedidosController.php,app\Services text codesize,design,unusedcode 2>&1 \| Out-File -FilePath docs\calidad\phpmd-antes.txt -Encoding utf8`<br><br>**Final (`64aa362`):**<br>`vendor\bin\phpstan analyse app\Controllers\Api\PedidosController.php app\Services --level=1 2>&1 \| Out-File -FilePath docs\calidad\phpstan-despues.txt -Encoding utf8`<br>`vendor\bin\phpmd app\Controllers\Api\PedidosController.php,app\Services text codesize,design,unusedcode 2>&1 \| Out-File -FilePath docs\calidad\phpmd-despues.txt -Encoding utf8` |
+| **Commits base y final** | Commit base de código: `afd615a` (línea base estática registrada en `ad4cd87`) — Commit final de código: `64aa362` |
+
+### Comparación Cuantitativa Inicial vs. Final (Mismo Alcance)
+
+| Indicador (mismo alcance) | Inicial (`afd615a`) | Final (`64aa362`) | Interpretación |
+| :--- | :---: | :---: | :--- |
+| **Alertas PHPStan (`--level=1`)** | **2** (`Function config not found` en `:563` y `Function env not found` en `:565` de `PedidosController.php`) | **0** (`[OK] No errors`) | Los 2 avisos iniciales se debían a que PHPStan no descubre helpers globales de CodeIgniter 4 sin bootstrap adicional, pero también evidenciaron acoplamiento directo del controlador a la configuración. Al mover la política `SC-01` a `PedidoProcesadorService` usando `Factories::config('Pedidos')` tipado con `Config\Pedidos`, desaparecieron ambas alertas sin supresiones artificiales. Además, durante la medición tras R1, PHPStan detectó un error real de namespace (`App\Config\Pedidos` inexistente en lugar de `Config\Pedidos`), corregido en `64aa362`. |
+| **Hallazgos PHPMD (`codesize,design,unusedcode`)** | **6** (todos en `PedidosController.php`) | **0** (en `PedidosController.php` y `app/Services`) | Se eliminaron el 100% de las violaciones de tamaño y complejidad en el controlador sin trasladar alertas de complejidad a `PedidoValidatorService` ni `PedidoProcesadorService`. |
+| **Complejidad de clase `PedidosController`** | **54** (umbral `50`, `ExcessiveClassComplexity`) | **33** *(cálculo manual verificable)* | Al extraer validación y procesamiento transaccional a `App\Services` (R1) y simplificar guardas (R2), la suma de complejidad ciclomática de sus 6 métodos (`index`=5, `show`=5, `crearRecepcion`=9, `obtenerTicket`=4, `cambiarEstado`=7, `extraerIdNumerico`=3) cayó por debajo del umbral de `50`, desapareciendo la alerta de PHPMD. |
+| **Complejidad de `crearRecepcion()`** | `CC = 28`, `NPath = 456144`, `579 líneas` (PHPMD) | `CC = 9` *(manual: 1 + 8 decisiones)*, `84 líneas` | Bajó por debajo de los umbrales de PHPMD (`CC <= 10`, `NPath <= 200`, `<= 100 líneas`), conservando íntegramente el flujo de recepción, `SC-01` e `INC-01`. |
+| **Complejidad de `cambiarEstado()`** | `NPath = 216`, `119 líneas` (PHPMD) | `CC = 7` *(manual: 1 + 6 decisiones)*, `47 líneas` | Las cláusulas de guarda y `extraerIdNumerico()` redujeron la extensión en 60.5% y eliminaron la alerta de `NPathComplexity`. |
+| **Pruebas aprobadas / fallidas (PHPUnit)** | `55 aprobadas / 0 fallidas` (`124 aserciones`) | `55 aprobadas / 0 fallidas` tras R1 + `13 aprobadas / 0 fallidas` (`25 aserciones`) focalizadas tras R2 y `64aa362` | Ninguna regla funcional ni contrato HTTP/BD sufrió regresión durante las refactorizaciones. |
+
+---
+
+## F27. Bitácora y Evidencias Git
+
+| Commit (hash) | Archivo / Cambio | Justificación y prueba asociada |
+| :--- | :--- | :--- |
+| `afd615a` | Punto de partida (`change/SC-01`) | Estado base limpio con `INC-01` y `SC-01` implementados (`55 tests, 124 assertions`). |
+| `2537800` | `composer.json`, `composer.lock` | Incorporación de `phpstan/phpstan` (`2.3.7`) y `phpmd/phpmd` (`3.0.0`) en `require-dev` antes de modificar código productivo. |
+| `ad4cd87` | `docs/calidad/phpstan-antes.txt`, `docs/calidad/phpmd-antes.txt` | Registro congelado en Git de las métricas estáticas iniciales (2 errores PHPStan, 6 hallazgos PHPMD). |
+| `b92c3c7` | `app/Services/PedidoValidatorService.php`, `app/Services/PedidoProcesadorService.php`, `app/Controllers/Api/PedidosController.php` | **Refactorización R1 (Estructural):** Extracción de validación de detalles/pago inicial a `PedidoValidatorService` y orquestación de recepción, política `SC-01` y rollback `INC-01` a `PedidoProcesadorService`. Verificado con suite completa PHPUnit (`55 tests, 124 assertions`). |
+| `89d1b9c` | `app/Controllers/Api/PedidosController.php` | **Refactorización R2 (Localizada):** Extracción de `extraerIdNumerico()` y simplificación de `cambiarEstado()` con cláusulas de guarda. Verificado con suite focalizada (`13 tests, 25 assertions` en `docs/calidad/evidencias/phpunit-R2.txt`). |
+| `64aa362` | `app/Services/PedidoProcesadorService.php` | **Corrección de hallazgo estático (Actividad 7):** Corrección del namespace `App\Config\Pedidos` a `Config\Pedidos` detectado por PHPStan tras R1, llevando PHPStan a `0` errores y PHPMD a `0` hallazgos. Verificado con `docs/calidad/evidencias/phpunit-final.txt`. |
+
+### Archivos de Evidencia Conservados en el Repositorio
+
+* `docs/calidad/Informe-Calidad.md` (este documento con formatos F22–F28).
+* `docs/calidad/phpstan-antes.txt` y `docs/calidad/phpstan-despues.txt`.
+* `docs/calidad/phpmd-antes.txt` y `docs/calidad/phpmd-despues.txt`.
+* `docs/calidad/evidencias/phpunit-R2.txt` y `docs/calidad/evidencias/phpunit-final.txt`.
+
+---
+
+## F28. Puerta de Calidad y Guía de Cierre / Sustentación
+
+### Verificación de la Puerta de Calidad del Curso
+
+1. **Pruebas críticas aprobadas:** Cumplido (`55/55` en suite completa tras R1 y `13/13` focalizadas en `Pedidos` tras R2 y `64aa362`, `0` fallos).
+2. **Ningún defecto crítico nuevo:** Cumplido; las reglas `INC-01` (rollback ante sobrepago) y `SC-01` (20% mínimo) mantienen idéntico comportamiento observable.
+3. **Al menos dos refactorizaciones justificadas y verificables:** Cumplido (`R1` estructural en `b92c3c7` y `R2` localizada en `89d1b9c`).
+4. **Análisis estático repetido con las mismas condiciones:** Cumplido (`PHPStan 2.3.7 --level=1` y `PHPMD 3.0.0 codesize,design,unusedcode` sobre las mismas rutas).
+5. **Hallazgos críticos restantes explicados y priorizados:** Cumplido (`0` alertas restantes; el falso positivo inicial de helpers globales y el hallazgo real de namespace `Config\Pedidos` quedaron documentados en F26).
+
+### Respuestas Clave para Defensa Oral ante el Docente
+
+* **¿Por qué extraer lógica a `app/Services/` y no solo crear métodos privados en `PedidosController`?**
+  Porque PHPMD evalúa tanto la complejidad por método (`CyclomaticComplexity`, `NPathComplexity`) como la complejidad acumulada de la clase (`ExcessiveClassComplexity`, umbral `50`). Mover responsabilidades de validación y negocio a `PedidoValidatorService` y `PedidoProcesadorService` (R1) redujo la complejidad total de `PedidosController` de `54` a `33`, además de permitir probar las reglas sin acoplarse al ciclo HTTP.
+* **¿Cómo se garantizó que el rollback de `INC-01` y la política de `SC-01` no cambiaran?**
+  `PedidoProcesadorService` utiliza la misma instancia de `PedidoModel` compartida con el controlador y `Factories::config('Pedidos')` (el mismo singleton que lee `Sc01PagoInicialMinimoTest`). Ante un monto menor al mínimo (`SC-01`) o un rechazo de `PagoModel::registrarPago()` (`INC-01`), se ejecuta `$this->pedidoModel->delete($idPedido)`, eliminando en cascada (`ON DELETE CASCADE`) los registros de `DetallePedido` y devolviendo exactamente el código HTTP `422` y la estructura JSON original.

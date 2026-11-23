@@ -1,0 +1,8 @@
+﻿vendor\bin\phpmd : Deprecated: positional arguments are deprecated, use "phpmd analyze <file> --format text --ruleset 
+<ruleset>" instead.
+En línea: 15 Carácter: 1
++ vendor\bin\phpmd app\Controllers\Api\PedidosController.php,app\Servic ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Deprecated: pos...eset>" instead.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
