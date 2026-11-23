@@ -1,0 +1,23 @@
+PS C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba> Write-Host "=== HISTORIAL GIT (refactor/pedidos-calidad) ===" -ForegroundColor Green
+>> git log --oneline -n 8
+>> git status -s
+>> Write-Host "`n=== VERSIONES HERRAMIENTAS ===" -ForegroundColor Cyan
+>> vendor\bin\phpstan --version
+>> vendor\bin\phpmd --version
+=== HISTORIAL GIT (refactor/pedidos-calidad) ===
+489f908 (HEAD -> refactor/pedidos-calidad, origin/refactor/pedidos-calidad) docs(calidad): completar informe F22-F28 y evidencias finales guia 12
+64aa362 fix(static): corregir namespace Config\Pedidos en PedidoProcesadorService
+89d1b9c refactor(R2): simplificar cambiarEstado y extraer validacion de ID en PedidosController
+b92c3c7 refactor(R1): extraer validacion y orquestacion de recepcion a servicios
+ad4cd87 docs: registrar linea base inicial de phpstan y phpmd
+2537800 chore: agregar phpstan y phpmd para analisis estatico
+afd615a (origin/change/SC-01, change/SC-01) change: configurar porcentaje minimo de pago inicial SC-01
+1ee80a0 (origin/fix/INC-01, fix/INC-01) docs: agregar evidencias E1 E2 E3 de INC-01
+
+=== VERSIONES HERRAMIENTAS ===
+PHPStan - PHP Static Analysis Tool 2.3.7
+PHPMD 3.0.0
+PS C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba> 
+PS C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba> 
+PS C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba> 
+

@@ -1,0 +1,81 @@
+PS C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba> Write-Host "=== LINEA BASE GIT ===" -ForegroundColor Green
+>> git show --stat afd615a
+>> Write-Host "`n=== PHPSTAN ANTES (ad4cd87) ===" -ForegroundColor Cyan
+>> Get-Content docs\calidad\phpstan-antes.txt
+>> Write-Host "`n=== PHPMD ANTES (ad4cd87) ===" -ForegroundColor Cyan
+>> Get-Content docs\calidad\phpmd-antes.txt
+=== LINEA BASE GIT ===
+commit afd615a0856ecdd106a1244a0dfc2dec771fcc56 (origin/change/SC-01, change/SC-01)
+Author: Quispe Sierra Alex Jeanpier <188002085+drax3l@users.noreply.github.com>
+Date:   Fri Nov 13 00:01:14 2026 -0500
+
+    change: configurar porcentaje minimo de pago inicial SC-01
+
+ app/Config/Pedidos.php                          |  26 ++++
+ app/Controllers/Api/PedidosController.php       |  86 +++++++++++
+ tests/integration/Sc01PagoInicialMinimoTest.php | 182 ++++++++++++++++++++++++
+ 3 files changed, 294 insertions(+)
+
+=== PHPSTAN ANTES (ad4cd87) ===
+ 3/3 [============================] 100%
+En línea: 16 Carácter: 1
++ vendor\bin\phpstan analyse app\Controllers\Api\PedidosController.php  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( 0/3 [>--------...=========] 100%:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+ ------ ---------------------------------------------------------------------- 
+  Line   Controllers\Api\PedidosController.php                                 
+ ------ ---------------------------------------------------------------------- 
+  :563   Function config not found.                                            
+         ƒ¬¬  function.notFound                                                 
+         ƒÆí  Learn more at https://phpstan.org/user-guide/discovering-symbols  
+  :565   Function env not found.                                               
+         ƒ¬¬  function.notFound                                                 
+         ƒÆí  Learn more at https://phpstan.org/user-guide/discovering-symbols  
+ ------ ---------------------------------------------------------------------- 
+
+
+ [ERROR] Found 2 errors                                                                                                 
+
+
+=== PHPMD ANTES (ad4cd87) ===
+vendor\bin\phpmd : Deprecated: positional arguments are deprecated, use "phpmd analyze <file> --format text --ruleset <ruleset>" instead.
+En línea: 17 Carácter: 1
++ vendor\bin\phpmd app\Controllers\Api\PedidosController.php,app\Servic ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Deprecated: pos...eset>" instead.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba\app\Controllers\Api\PedidosController.php:36   ExcessiveClassComplexity  The class PedidosController has an overall complexity of 54 which is very high. The configured complexity threshold is 50.
+C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba\app\Controllers\Api\PedidosController.php:194  CyclomaticComplexity      The method crearRecepcion() has a Cyclomatic Complexity of 28. The configured cyclomatic complexity threshold is 10.
+C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba\app\Controllers\Api\PedidosController.php:194  NPathComplexity           The method crearRecepcion() has an NPath complexity of 456144. The configured NPath complexity threshold is 200.
+C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba\app\Controllers\Api\PedidosController.php:194  ExcessiveMethodLength     The method crearRecepcion() has 579 lines of code. Current threshold is set to 100. Avoid really long methods.
+C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba\app\Controllers\Api\PedidosController.php:839  NPathComplexity           The method cambiarEstado() has an NPath complexity of 216. The configured NPath complexity threshold is 200.
+C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba\app\Controllers\Api\PedidosController.php:839  ExcessiveMethodLength     The method cambiarEstado() has 119 lines of code. Current threshold is set to 100. Avoid really long methods.
+PS C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba> 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

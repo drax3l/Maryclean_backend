@@ -1,0 +1,394 @@
+PS C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba> # 1. Registrar commit atómico de R1 (ya validado con 55/55 pruebas)
+>> git diff --check
+>> git add app\Services\PedidoValidatorService.php app\Services\PedidoProcesadorService.php app\Controllers\Api\PedidosController.php
+>> git commit -m "refactor(R1): extraer validacion y orquestacion de recepcion a servicios"
+>> 
+>> # 2. Aplicar Refactorización R2 (Extract Method y Guard Clauses en PedidosController)
+>> $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+>> 
+>> [System.IO.File]::WriteAllText("$PWD\app\Controllers\Api\PedidosController.php", @'
+>> <?php
+>> 
+>> declare(strict_types=1);
+>> 
+>> namespace App\Controllers\Api;
+>> 
+>> use App\Models\PedidoModel;
+>> use App\Services\PedidoProcesadorService;
+>> use App\Services\PedidoValidatorService;
+>> use CodeIgniter\Database\Exceptions\DatabaseException;
+>> use CodeIgniter\HTTP\ResponseInterface;
+>> 
+>> /**
+>>  * PedidosController
+>>  *
+>>  * API REST para el ciclo de vida de los pedidos de MaryClean.
+>>  *
+>>  * ENDPOINTS:
+>>  *
+>>  * GET   /api/v1/pedidos
+>>  * POST  /api/v1/pedidos
+>>  * GET   /api/v1/pedidos/{id}
+>>  * GET   /api/v1/pedidos/{id}/ticket
+>>  * PATCH /api/v1/pedidos/{id}/estado
+>>  */
+>> class PedidosController extends BaseApiController
+>> {
+>>     private PedidoModel $pedidoModel;
+>>     private PedidoValidatorService $validatorService;
+>>     private PedidoProcesadorService $procesadorService;
+>> 
+>>     public function __construct()
+>>     {
+>>         $this->pedidoModel       = new PedidoModel();
+>>         $this->validatorService  = new PedidoValidatorService();
+>>         $this->procesadorService = new PedidoProcesadorService($this->pedidoModel);
+>>     }
+>> 
+>>     // ===============================================================
+>>     // GET /api/v1/pedidos
+>>     // ===============================================================
+>> 
+>>     /**
+>>      * Lista pedidos aplicando filtros dinámicos.
+>>      */
+>>     public function index(): ResponseInterface
+>>     {
+>>         $payload = $this->getAuthPayload();
+>> 
+>>         $filtros = [
+>>             'estado'     => $this->request->getGet('estado'),
+>>             'sucursal'   => $this->request->getGet('sucursal'),
+>>             'cliente_id' => $this->request->getGet('cliente_id'),
+>>             'search'     => $this->request->getGet('search'),
+>>             'page'       => $this->request->getGet('page') ?? 1,
+>>         ];
+>> 
+>>         // Usuarios que no son admin solo pueden consultar pedidos de su propia sucursal.
+>>         if (! $this->tieneRol('admin') && empty($filtros['sucursal'])) {
+>>             $filtros['sucursal'] = $payload['sucursal'] ?? null;
+>>         }
+>> 
+>>         $perPage = (int) ($this->request->getGet('per_page') ?? 15);
+>>         $perPage = ($perPage > 0 && $perPage <= 100) ? $perPage : 15;
+>> 
+>>         $resultado = $this->pedidoModel->getPedidosDinamicos($filtros, $perPage);
+>> 
+>>         return $this->respondSuccess([
+>>             'pedidos'  => $resultado['pedidos'],
+>>             'total'    => $resultado['total'],
+>>             'page'     => $resultado['page'],
+>>             'per_page' => $resultado['per_page'],
+>>         ]);
+>>     }
+>> 
+>>     // ===============================================================
+>>     // GET /api/v1/pedidos/{id}
+>>     // ===============================================================
+>> 
+>>     /**
+>>      * Obtiene el pedido completo.
+>>      */
+>>     public function show($id = null): ResponseInterface
+>>     {
+>>         $idPedido = $this->extraerIdNumerico($id);
+>>         if ($idPedido === null) {
+>>             return $this->respondError(
+>>                 'El identificador del pedido es inválido.',
+>>                 ResponseInterface::HTTP_BAD_REQUEST
+>>             );
+>>         }
+>> 
+>>         try {
+>>             $pedido = $this->pedidoModel->getPedidoCompleto($idPedido);
+>> 
+>>             if ($pedido === null) {
+>>                 return $this->respondNotFound("Pedido #{$idPedido} no encontrado.");
+>>             }
+>> 
+>>             return $this->respondSuccess($pedido);
+>>         } catch (DatabaseException $e) {
+>>             return $this->handleDbException($e);
+>>         }
+>>     }
+>> 
+>>     // ===============================================================
+>>     // POST /api/v1/pedidos
+>>     // ===============================================================
+>> 
+>>     /**
+>>      * Registra un nuevo pedido delegando validaciones y procesamiento transaccional.
+>>      */
+>>     public function crearRecepcion(): ResponseInterface
+>>     {
+>>         if (! $this->tieneRol('recepcionista', 'cajero', 'admin')) {
+>>             return $this->respondError(
+>>                 'No tiene permisos para registrar pedidos.',
+>>                 ResponseInterface::HTTP_FORBIDDEN
+>>             );
+>>         }
+>> 
+>>         $body = $this->getJsonBody();
+>> 
+>>         $rules = [
+>>             'idCliente' => 'required|integer|is_not_unique[Cliente.idCliente]',
+>>             'detalles'  => 'required',
+>>         ];
+>> 
+>>         $messages = [
+>>             'idCliente' => [
+>>                 'required'      => 'El cliente es obligatorio.',
+>>                 'integer'       => 'El identificador del cliente debe ser válido.',
+>>                 'is_not_unique' => 'El cliente especificado no existe.',
+>>             ],
+>>             'detalles' => [
+>>                 'required' => 'Debe incluir al menos una prenda en el pedido.',
+>>             ],
+>>         ];
+>> 
+>>         if (! $this->validateData($body, $rules, $messages)) {
+>>             return $this->respondValidationError($this->validator->getErrors());
+>>         }
+>> 
+>>         $erroresDetalles = $this->validatorService->validarDetalles($body['detalles'] ?? []);
+>>         if ($erroresDetalles !== []) {
+>>             return $this->respondValidationError($erroresDetalles);
+>>         }
+>> 
+>>         $validacionPago = $this->validatorService->validarYNormalizarPagoInicial($body);
+>>         if ($validacionPago['errors'] !== []) {
+>>             return $this->respondValidationError($validacionPago['errors']);
+>>         }
+>> 
+>>         $payload    = $this->getAuthPayload();
+>>         $idEmpleado = (int) ($payload['id'] ?? 0);
+>> 
+>>         if ($idEmpleado <= 0) {
+>>             return $this->respondError(
+>>                 'No se pudo identificar al empleado autenticado.',
+>>                 ResponseInterface::HTTP_UNAUTHORIZED
+>>             );
+>>         }
+>> 
+>>         try {
+>>             $resultado = $this->procesadorService->registrarPedidoCompleto(
+>>                 (int) $body['idCliente'],
+>>                 $idEmpleado,
+>>                 $body['detalles'],
+>>                 $validacionPago['pagoInicial']
+>>             );
+>> 
+>>             if (! $resultado['success']) {
+>>                 return $this->respondError(
+>>                     $resultado['message'],
+>>                     $resultado['status'],
+>>                     $resultado['errors']
+>>                 );
+>>             }
+>> 
+>>             return $this->respondCreated($resultado['data'], $resultado['message']);
+>>         } catch (DatabaseException $e) {
+>>             return $this->handleDbException($e);
+>>         } catch (\RuntimeException $e) {
+>>             return $this->respondError(
+>>                 $e->getMessage(),
+>>                 ResponseInterface::HTTP_INTERNAL_SERVER_ERROR
+>>             );
+>>         }
+>>     }
+>> 
+>>     // ===============================================================
+>>     // GET /api/v1/pedidos/{id}/ticket
+>>     // ===============================================================
+>> 
+>>     /**
+>>      * Obtiene el ticket completo del pedido.
+>>      */
+>>     public function obtenerTicket($id = null): ResponseInterface
+>>     {
+>>         $idPedido = $this->extraerIdNumerico($id);
+>>         if ($idPedido === null) {
+>>             return $this->respondError(
+>>                 'El identificador del pedido es inválido.',
+>>                 ResponseInterface::HTTP_BAD_REQUEST
+>>             );
+>>         }
+>> 
+>>         try {
+>>             $ticket = $this->pedidoModel->getDatosTicket($idPedido);
+>> 
+>>             return $this->respondSuccess($ticket, 'Ticket generado exitosamente.');
+>>         } catch (\RuntimeException $e) {
+>>             return $this->respondNotFound($e->getMessage());
+>>         } catch (DatabaseException $e) {
+>>             return $this->handleDbException($e);
+>>         }
+>>     }
+>> 
+>>     // ===============================================================
+>>     // PATCH /api/v1/pedidos/{id}/estado
+>>     // ===============================================================
+>> 
+>>     /**
+>>      * Actualiza el estado operativo del pedido mediante cláusulas de guarda.
+>>      */
+>>     public function cambiarEstado($id = null): ResponseInterface
+>>     {
+>>         $idPedido = $this->extraerIdNumerico($id);
+>>         if ($idPedido === null) {
+>>             return $this->respondError(
+>>                 'El identificador del pedido es inválido.',
+>>                 ResponseInterface::HTTP_BAD_REQUEST
+>>             );
+>>         }
+>> 
+>>         $body        = $this->getJsonBody();
+>>         $nuevoEstado = trim((string) ($body['estado'] ?? ''));
+>> 
+>>         if ($nuevoEstado === '') {
+>>             return $this->respondValidationError(['estado' => 'El nuevo estado es requerido.']);
+>>         }
+>> 
+>>         if ($nuevoEstado === 'Cancelado' && ! $this->tieneRol('admin')) {
+>>             return $this->respondError(
+>>                 'Solo el administrador puede cancelar pedidos.',
+>>                 ResponseInterface::HTTP_FORBIDDEN
+>>             );
+>>         }
+>> 
+>>         if ($this->pedidoModel->find($idPedido) === null) {
+>>             return $this->respondNotFound("Pedido #{$idPedido} no encontrado.");
+>>         }
+>> 
+>>         try {
+>>             $this->pedidoModel->cambiarEstado($idPedido, $nuevoEstado);
+>> 
+>>             $pedidoActualizado = $this->pedidoModel
+>>                 ->select('idPedido, codigoTicket, estado, fechaEntrega, total')
+>>                 ->find($idPedido);
+>> 
+>>             return $this->respondSuccess(
+>>                 $pedidoActualizado,
+>>                 "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+>>             );
+>>         } catch (\InvalidArgumentException $e) {
+>>             return $this->respondValidationError(['estado' => $e->getMessage()]);
+>>         } catch (DatabaseException $e) {
+>>             return $this->handleDbException($e);
+>>         }
+>>     }
+>> 
+>>     /**
+>>      * Extrae y valida el identificador numérico recibido por ruta.
+>>      */
+>>     private function extraerIdNumerico(mixed $id): ?int
+>>     {
+>>         if ($id === null || ! is_numeric($id)) {
+>>             return null;
+>>         }
+>> 
+>>         return (int) $id;
+>>     }
+>> }
+>> '@, $utf8NoBom)
+>> 
+>> # 3. Validar sintaxis, hacer commit de R2 y correr pruebas focalizadas guardando evidencia con Tee-Object
+>> php -l app\Controllers\Api\PedidosController.php
+>> git diff --check
+>> git add app\Controllers\Api\PedidosController.php
+>> git commit -m "refactor(R2): simplificar cambiarEstado y extraer validacion de ID en PedidosController"
+>> 
+>> vendor\bin\phpunit -c phpunit.dist.xml --no-coverage tests\unit tests\integration\Sc01PagoInicialMinimoTest.php tests\integration\Inc01PagoInicialRollbackTest.php | Tee-Object -FilePath docs\calidad\evidencias\phpunit-R2.txt
+>> 
+>> # 4. Ejecutar análisis estático DESPUÉS de refactorizar (idénticas rutas, nivel y reglas que *-antes.txt)
+>> vendor\bin\phpstan analyse app\Controllers\Api\PedidosController.php app\Services --level=1 2>&1 | Out-File -FilePath docs\calidad\phpstan-despues.txt -Encoding utf8
+>> vendor\bin\phpmd app\Controllers\Api\PedidosController.php,app\Services text codesize,design,unusedcode 2>&1 | Out-File -FilePath docs\calidad\phpmd-despues.txt -Encoding utf8
+>> 
+>> Write-Host "`n=== PHPSTAN DESPUES ===" -ForegroundColor Cyan
+>> Get-Content docs\calidad\phpstan-despues.txt
+>> Write-Host "`n=== PHPMD DESPUES ===" -ForegroundColor Cyan
+>> Get-Content docs\calidad\phpmd-despues.txt
+>> Write-Host "`n=== HISTORIAL DE COMMITS EN RAMA ===" -ForegroundColor Green
+>> git log --oneline -n 6
+[refactor/pedidos-calidad b92c3c7] refactor(R1): extraer validacion y orquestacion de recepcion a servicios
+ 3 files changed, 463 insertions(+), 772 deletions(-)
+No syntax errors detected in app\Controllers\Api\PedidosController.php
+[refactor/pedidos-calidad 89d1b9c] refactor(R2): simplificar cambiarEstado y extraer validacion de ID en PedidosController
+ 1 file changed, 34 insertions(+), 46 deletions(-)
+PHPUnit 10.5.66 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.2.12
+Configuration: C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba\phpunit.dist.xml
+
+.............                                                                                               13 / 13 (100%)
+
+Time: 03:16.957, Memory: 18.00 MB
+
+OK (13 tests, 25 assertions)
+
+=== PHPSTAN DESPUES ===
+ 3/3 [============================] 100%
+En línea: 304 Carácter: 1
++ vendor\bin\phpstan analyse app\Controllers\Api\PedidosController.php  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( 0/3 [>--------...=========] 100%:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+ ------ ---------------------------------------------------------------------------------------------------------- 
+  Line   Services\PedidoProcesadorService.php                                                                      
+ ------ ---------------------------------------------------------------------------------------------------------- 
+  :19    Property App\Services\PedidoProcesadorService::$config has unknown class App\Config\Pedidos as its type.  
+         ƒ¬¬  class.notFound                                                                                        
+         ƒÆí  Learn more at https://phpstan.org/user-guide/discovering-symbols                                      
+  :25    Parameter $config of method App\Services\PedidoProcesadorService::__construct() has invalid type          
+         App\Config\Pedidos.                                                                                       
+         ƒ¬¬  class.notFound                                                                                        
+ ------ ---------------------------------------------------------------------------------------------------------- 
+
+
+ [ERROR] Found 2 errors                                                                                                 
+
+
+=== PHPMD DESPUES ===
+vendor\bin\phpmd : Deprecated: positional arguments are deprecated, use "phpmd analyze <file> --format text --ruleset 
+<ruleset>" instead.
+En línea: 305 Carácter: 1
++ vendor\bin\phpmd app\Controllers\Api\PedidosController.php,app\Servic ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Deprecated: pos...eset>" instead.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+=== HISTORIAL DE COMMITS EN RAMA ===
+89d1b9c (HEAD -> refactor/pedidos-calidad) refactor(R2): simplificar cambiarEstado y extraer validacion de ID en PedidosController
+b92c3c7 refactor(R1): extraer validacion y orquestacion de recepcion a servicios
+ad4cd87 docs: registrar linea base inicial de phpstan y phpmd
+2537800 chore: agregar phpstan y phpmd para analisis estatico
+afd615a (origin/change/SC-01, change/SC-01) change: configurar porcentaje minimo de pago inicial SC-01
+1ee80a0 (origin/fix/INC-01, fix/INC-01) docs: agregar evidencias E1 E2 E3 de INC-01
+PS C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba> 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

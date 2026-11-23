@@ -1,0 +1,1026 @@
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
+:
+                 $pedidoActualizado,
+:
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+:
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
+:
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
+:
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+:
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+ }
+\ No newline at end of file
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+:
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+:
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+:
+                 $pedidoActualizado,
+-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
++                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
+             );
+         } catch (\InvalidArgumentException $e) {
+-            return $this->respondValidationError([
+-                'estado' => $e->getMessage(),
+-            ]);
++            return $this->respondValidationError(['estado' => $e->getMessage()]);
+         } catch (DatabaseException $e) {
+             return $this->handleDbException($e);
+         }
+     }
++
++    /**
++     * Extrae y valida el identificador numérico recibido por ruta.
++     */
++    private function extraerIdNumerico(mixed $id): ?int
++    {
++        if ($id === null || ! is_numeric($id)) {
++            return null;
++        }
++
++        return (int) $id;
++    }
+:

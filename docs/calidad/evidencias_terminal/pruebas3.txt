@@ -1,0 +1,41 @@
+PS C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba> Write-Host "=== EVIDENCIA PHPUNIT TRAS R2 ===" -ForegroundColor Cyan
+>> Get-Content docs\calidad\evidencias\phpunit-R2.txt
+>> Write-Host "`n=== EVIDENCIA PHPUNIT FINAL (TRAS 64aa362) ===" -ForegroundColor Green
+>> Get-Content docs\calidad\evidencias\phpunit-final.txt
+=== EVIDENCIA PHPUNIT TRAS R2 ===
+PHPUnit 10.5.66 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.2.12
+Configuration: C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba\phpunit.dist.xml
+
+.............                                                                                               13 / 13 (100%)
+
+Time: 03:16.957, Memory: 18.00 MB
+
+OK (13 tests, 25 assertions)
+
+=== EVIDENCIA PHPUNIT FINAL (TRAS 64aa362) ===
+PHPUnit 10.5.66 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.2.12
+Configuration: C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba\phpunit.dist.xml
+
+.............                                                                                               13 / 13 (100%)
+
+Time: 03:13.508, Memory: 18.00 MB
+
+OK (13 tests, 25 assertions)
+PS C:\Users\ALEX\Downloads\Proyecto_codeIgniter\proyecto_prueba> 
+
+
+
+
+
+
+
+
+
+
+
+
+
