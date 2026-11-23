@@ -82,7 +82,8 @@ class PedidosController extends BaseApiController
      */
     public function show($id = null): ResponseInterface
     {
-        if ($id === null || ! is_numeric($id)) {
+        $idPedido = $this->extraerIdNumerico($id);
+        if ($idPedido === null) {
             return $this->respondError(
                 'El identificador del pedido es inválido.',
                 ResponseInterface::HTTP_BAD_REQUEST
@@ -90,10 +91,10 @@ class PedidosController extends BaseApiController
         }
 
         try {
-            $pedido = $this->pedidoModel->getPedidoCompleto((int) $id);
+            $pedido = $this->pedidoModel->getPedidoCompleto($idPedido);
 
             if ($pedido === null) {
-                return $this->respondNotFound("Pedido #{$id} no encontrado.");
+                return $this->respondNotFound("Pedido #{$idPedido} no encontrado.");
             }
 
             return $this->respondSuccess($pedido);
@@ -196,7 +197,8 @@ class PedidosController extends BaseApiController
      */
     public function obtenerTicket($id = null): ResponseInterface
     {
-        if ($id === null || ! is_numeric($id)) {
+        $idPedido = $this->extraerIdNumerico($id);
+        if ($idPedido === null) {
             return $this->respondError(
                 'El identificador del pedido es inválido.',
                 ResponseInterface::HTTP_BAD_REQUEST
@@ -204,7 +206,7 @@ class PedidosController extends BaseApiController
         }
 
         try {
-            $ticket = $this->pedidoModel->getDatosTicket((int) $id);
+            $ticket = $this->pedidoModel->getDatosTicket($idPedido);
 
             return $this->respondSuccess($ticket, 'Ticket generado exitosamente.');
         } catch (\RuntimeException $e) {
@@ -219,77 +221,63 @@ class PedidosController extends BaseApiController
     // ===============================================================
 
     /**
-     * Actualiza el estado operativo del pedido.
+     * Actualiza el estado operativo del pedido mediante cláusulas de guarda.
      */
     public function cambiarEstado($id = null): ResponseInterface
     {
-        if (
-            $id === null
-            || ! is_numeric($id)
-        ) {
+        $idPedido = $this->extraerIdNumerico($id);
+        if ($idPedido === null) {
             return $this->respondError(
                 'El identificador del pedido es inválido.',
                 ResponseInterface::HTTP_BAD_REQUEST
             );
         }
 
-        $body = $this->getJsonBody();
-
-        if (! is_array($body)) {
-            return $this->respondError(
-                'El cuerpo de la solicitud debe contener un JSON válido.',
-                ResponseInterface::HTTP_BAD_REQUEST
-            );
-        }
-
-        $nuevoEstado = trim(
-            (string) (
-                $body['estado']
-                ?? ''
-            )
-        );
+        $body        = $this->getJsonBody();
+        $nuevoEstado = trim((string) ($body['estado'] ?? ''));
 
         if ($nuevoEstado === '') {
-            return $this->respondValidationError([
-                'estado' => 'El nuevo estado es requerido.',
-            ]);
+            return $this->respondValidationError(['estado' => 'El nuevo estado es requerido.']);
         }
 
-        $pedido = $this->pedidoModel->find((int) $id);
-
-        if ($pedido === null) {
-            return $this->respondNotFound("Pedido #{$id} no encontrado.");
-        }
-
-        // Solo admin puede cancelar
-        if (
-            $nuevoEstado === 'Cancelado'
-            && ! $this->tieneRol('admin')
-        ) {
+        if ($nuevoEstado === 'Cancelado' && ! $this->tieneRol('admin')) {
             return $this->respondError(
                 'Solo el administrador puede cancelar pedidos.',
                 ResponseInterface::HTTP_FORBIDDEN
             );
         }
 
-        try {
-            $this->pedidoModel->cambiarEstado((int) $id, $nuevoEstado);
+        if ($this->pedidoModel->find($idPedido) === null) {
+            return $this->respondNotFound("Pedido #{$idPedido} no encontrado.");
+        }
 
-            // Refrescar después del trigger
+        try {
+            $this->pedidoModel->cambiarEstado($idPedido, $nuevoEstado);
+
             $pedidoActualizado = $this->pedidoModel
                 ->select('idPedido, codigoTicket, estado, fechaEntrega, total')
-                ->find((int) $id);
+                ->find($idPedido);
 
             return $this->respondSuccess(
                 $pedidoActualizado,
-                "Estado del pedido #{$id} actualizado a '{$nuevoEstado}'."
+                "Estado del pedido #{$idPedido} actualizado a '{$nuevoEstado}'."
             );
         } catch (\InvalidArgumentException $e) {
-            return $this->respondValidationError([
-                'estado' => $e->getMessage(),
-            ]);
+            return $this->respondValidationError(['estado' => $e->getMessage()]);
         } catch (DatabaseException $e) {
             return $this->handleDbException($e);
         }
+    }
+
+    /**
+     * Extrae y valida el identificador numérico recibido por ruta.
+     */
+    private function extraerIdNumerico(mixed $id): ?int
+    {
+        if ($id === null || ! is_numeric($id)) {
+            return null;
+        }
+
+        return (int) $id;
     }
 }
